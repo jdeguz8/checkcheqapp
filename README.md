@@ -6,8 +6,9 @@
   <h1>CheckCheq — Smart Grocery Price Checker</h1>
 
   <p>
-    A modern Android application for tracking grocery prices, managing a shopping basket,
-    and (soon) comparing store locations across Winnipeg.
+ An Android app built with Kotlin, Jetpack Compose, Room, and Hilt.  
+    Recently enhanced with a corrected DI setup, improved Basket features,  
+    and new architecture patterns in preparation for Firebase + photo uploads.
   </p>
 
   <p>
@@ -28,35 +29,42 @@
 
 <hr/>
 
-## Overview
+CheckCheq is a Winnipeg-focused grocery comparison and basket-tracking app.  
+It began with a simple Compose UI + Room DB setup, and has now grown into a more robust architecture with:
 
-CheckCheq is an Android app built with Kotlin, Jetpack Compose, Room, and Hilt.  
-It focuses on:
+- Fully reactive basket management  
+- Clean DI through Hilt  
+- Modularized repository layer  
+- Fixed ApiService injection (Hilt @Provides fix)  
+- Updated Basket UI with quantity controls and deletion  
 
-- A persistent shopping basket
-- Reactive UI driven by local database state
-- A clean, modern architecture suitable for both coursework and portfolio use
-
-Future iterations will include store mapping and cloud sync using Firebase and Google Maps.
+The next step in the project is **Firebase Firestore sync + user photo uploads**, which will allow:
+- Store data sync in the cloud  
+- User-submitted price photos  
+- Cross-device functionality
 
 ---
 
 ## Features
 
-### Basket Management (Implemented)
+### Basket Management (Updated)
 
-- Add items to a basket
-- Increase and decrease item quantities
-- Remove items from the basket
-- Persist data locally with Room Database
-- Automatically update the UI via StateFlow and Jetpack Compose
+This section was recently upgraded to support:
 
-### Jetpack Compose UI
+- Add items to basket  
+- Increase / decrease quantity  
+- Remove items  
+- Automatic persistence through Room  
+- UI updates in real time using StateFlow  
+- Repository-driven logic (no business logic in UI)
 
-- Material 3 styling
-- Reactive, state-driven layout
-- Simple and clean presentation of basket items and counts
+### Compose UI Improvements
 
+- Cleaner Basket rows  
+- Proper state hoisting  
+- Separation of concerns  
+- List rendering via LazyColumn  
+- Text fields + buttons for rapid input
 ### Architecture and Dependency Injection
 
 - MVVM pattern
@@ -66,43 +74,6 @@ Future iterations will include store mapping and cloud sync using Firebase and G
 
 ---
 
-## Roadmap (Planned Features)
-
-### Google Maps Integration
-
-- Long-press to save store locations
-- Display a map of saved stores
-- Associate prices with specific stores
-
-### Firebase Firestore Sync
-
-- Sync basket and store data to the cloud
-- Access data across multiple devices
-- Store historical price records for analysis
-
-### Price Tracking
-
-- Integrate with a price API (future)
-- Store historical price data
-- Compare prices between stores over time
-
----
-
-## Tech Stack
-
-<div align="center">
-
-| Layer         | Technologies                                                          |
-|--------------|------------------------------------------------------------------------|
-| Language      | Kotlin                                                                |
-| UI           | Jetpack Compose, Material 3                                           |
-| Architecture | MVVM, Repository pattern, StateFlow                                   |
-| Local Data   | Room Database, DAOs, Entities                                         |
-| Async        | Coroutines, Flow                                                      |
-| DI           | Hilt                                                                   |
-| Remote (future) | Firebase Firestore, Google Maps SDK, REST APIs                    |
-
-</div>
 
 ---
 
