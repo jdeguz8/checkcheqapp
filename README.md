@@ -13,9 +13,7 @@
 
   <p>
     <a href="#features"><strong>Features</strong></a> •
-    <a href="#tech-stack"><strong>Tech Stack</strong></a> •
     <a href="#project-structure"><strong>Structure</strong></a> •
-    <a href="#installation"><strong>Installation</strong></a> •
     <a href="#author"><strong>Author</strong></a>
   </p>
 
@@ -72,16 +70,14 @@ This section was recently upgraded to support:
 - Domain models mapped from entities
 - Hilt for dependency injection of DAOs, repositories and ViewModels
 
----
-
 
 ---
 
-Author
+## Author
 <div align="left">
 
 Jonathan De Guzman
-Android Developer (in training) — Winnipeg, MB, Canada
+Developer (in training) — Winnipeg, MB, Canada
 
 LinkedIn: https://www.linkedin.com/in/jonathan-de-guzman-56585529b/
 
