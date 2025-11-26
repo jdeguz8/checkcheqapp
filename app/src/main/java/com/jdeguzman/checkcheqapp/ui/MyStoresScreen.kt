@@ -1,9 +1,13 @@
 package com.jdeguzman.checkcheqapp.ui
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.google.android.gms.maps.model.CameraPosition
@@ -20,9 +24,8 @@ fun MyStoresScreen(
     viewModel: MyStoresViewModel = hiltViewModel()
 ) {
     val pins by viewModel.pins.collectAsState()
-    val pendingLatLng by viewModel.pendingLatLng.collectAsState()
+    val dialogUi by viewModel.dialogUi.collectAsState()
 
-    // Center on Winnipeg for now
     val winnipeg = remember { LatLng(49.8951, -97.1384) }
     val cameraPositionState = rememberCameraPositionState {
         position = CameraPosition.fromLatLngZoom(winnipeg, 11f)
@@ -34,39 +37,43 @@ fun MyStoresScreen(
                 title = { Text("CheckCheq price map") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Text("<") // you can swap this for a real back icon
+                        Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
                     }
                 }
             )
         }
-    ) { padding ->
+    ) { innerPadding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
+                .padding(innerPadding)
         ) {
             GoogleMap(
                 modifier = Modifier.fillMaxSize(),
                 cameraPositionState = cameraPositionState,
                 onMapLongClick = { latLng ->
-                    viewModel.onMapLongClick(latLng)
+                    viewModel.onMapLongClick(
+                        lat = latLng.latitude,
+                        lng = latLng.longitude
+                    )
                 }
             ) {
                 pins.forEach { pin ->
                     Marker(
-                        state = MarkerState(position = pin.position),
-                        title = pin.storeName,
-                        snippet = "${pin.itemName} – $${pin.price}"
+                        state = MarkerState(LatLng(pin.lat, pin.lng)),
+                        title = "${pin.storeName} - ${pin.itemName}",
+                        snippet = "$${"%.2f".format(pin.price)}"
                     )
                 }
             }
 
-            if (pendingLatLng != null) {
-                AddPinDialog(
-                    onDismiss = { viewModel.cancelAddPin() },
-                    onSave = { itemName, price, storeName ->
-                        viewModel.addPin(itemName, price, storeName)
-                    }
+            if (dialogUi.showAddDialog) {
+                AddPriceDialog(
+                    onConfirm = { storeName, itemName, priceText ->
+                        val price = priceText.toDoubleOrNull() ?: 0.0
+                        viewModel.onAddPin(storeName, itemName, price)
+                    },
+                    onDismiss = { viewModel.onDismissDialog() }
                 )
             }
         }
@@ -74,52 +81,50 @@ fun MyStoresScreen(
 }
 
 @Composable
-private fun AddPinDialog(
-    onDismiss: () -> Unit,
-    onSave: (itemName: String, price: Double, storeName: String) -> Unit
+fun AddPriceDialog(
+    onConfirm: (storeName: String, itemName: String, priceText: String) -> Unit,
+    onDismiss: () -> Unit
 ) {
+    var storeName by remember { mutableStateOf("") }
     var itemName by remember { mutableStateOf("") }
     var priceText by remember { mutableStateOf("") }
-    var storeName by remember { mutableStateOf("") }
-    var error by remember { mutableStateOf<String?>(null) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Add price pin") },
+        title = { Text("Add store price") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(
-                    value = itemName,
-                    onValueChange = { itemName = it },
-                    label = { Text("Item (e.g. 2L milk)") }
-                )
-                OutlinedTextField(
-                    value = priceText,
-                    onValueChange = { priceText = it },
-                    label = { Text("Price (e.g. 4.99)") }
-                )
+            Column {
                 OutlinedTextField(
                     value = storeName,
                     onValueChange = { storeName = it },
-                    label = { Text("Store name") }
+                    label = { Text("Store name") },
+                    modifier = Modifier.fillMaxWidth()
                 )
-                if (error != null) {
-                    Text(
-                        text = error!!,
-                        color = MaterialTheme.colorScheme.error
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = itemName,
+                    onValueChange = { itemName = it },
+                    label = { Text("Item name") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = priceText,
+                    onValueChange = { priceText = it },
+                    label = { Text("Price") },
+                    modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Number
                     )
-                }
+                )
             }
         },
         confirmButton = {
-            TextButton(onClick = {
-                val price = priceText.toDoubleOrNull()
-                if (itemName.isBlank() || storeName.isBlank() || price == null) {
-                    error = "Please enter item, price, and store."
-                } else {
-                    onSave(itemName, price, storeName)
+            TextButton(
+                onClick = {
+                    onConfirm(storeName, itemName, priceText)
                 }
-            }) {
+            ) {
                 Text("Save")
             }
         },

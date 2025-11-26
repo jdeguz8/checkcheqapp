@@ -1,65 +1,96 @@
 package com.jdeguzman.checkcheqapp.ui
 
 import androidx.lifecycle.ViewModel
-import com.google.android.gms.maps.model.LatLng
+import androidx.lifecycle.viewModelScope
+import com.jdeguzman.checkcheqapp.data.local.dao.StorePriceDao
+import com.jdeguzman.checkcheqapp.data.local.entity.StorePriceEntity
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-// A single pin on the map
 data class StorePricePin(
     val id: Long,
-    val itemName: String,
-    val price: Double,
+    val lat: Double,
+    val lng: Double,
     val storeName: String,
-    val position: LatLng,
-    val photoUri: String? = null,          // reserved for later when we wire photos
-    val createdAt: Long = System.currentTimeMillis()
+    val itemName: String,
+    val price: Double
+)
+
+data class DialogUiState(
+    val showAddDialog: Boolean = false,
+    val pendingLat: Double? = null,
+    val pendingLng: Double? = null
 )
 
 @HiltViewModel
 class MyStoresViewModel @Inject constructor(
-    // later: inject repo / DAO / Firebase here
+    private val storePriceDao: StorePriceDao
 ) : ViewModel() {
 
-    private val _pins = MutableStateFlow<List<StorePricePin>>(emptyList())
-    val pins: StateFlow<List<StorePricePin>> = _pins.asStateFlow()
+    // pins coming from Room
+    val pins: StateFlow<List<StorePricePin>> =
+        storePriceDao.observeAll()
+            .map { list ->
+                list.map { it.toDomain() }
+            }
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5000L),
+                initialValue = emptyList()
+            )
 
-    // null = no dialog; non-null = show "add pin" dialog for this location
-    private val _pendingLatLng = MutableStateFlow<LatLng?>(null)
-    val pendingLatLng: StateFlow<LatLng?> = _pendingLatLng.asStateFlow()
+    // dialog / pending location state
+    private val _dialogUi = MutableStateFlow(DialogUiState())
+    val dialogUi: StateFlow<DialogUiState> = _dialogUi.asStateFlow()
 
-    fun onMapLongClick(latLng: LatLng) {
-        _pendingLatLng.value = latLng
+    fun onMapLongClick(lat: Double, lng: Double) {
+        _dialogUi.update {
+            it.copy(
+                showAddDialog = true,
+                pendingLat = lat,
+                pendingLng = lng
+            )
+        }
     }
 
-    fun addPin(itemName: String, price: Double, storeName: String) {
-        val pos = _pendingLatLng.value ?: return
-
-        val cleanItem = itemName.trim()
-        val cleanStore = storeName.trim()
-        val p = price
-
-        if (cleanItem.isEmpty() || cleanStore.isEmpty()) return
-
-        val pin = StorePricePin(
-            id = System.currentTimeMillis(),
-            itemName = cleanItem,
-            price = p,
-            storeName = cleanStore,
-            position = pos
-        )
-
-        _pins.update { it + pin }
-        _pendingLatLng.value = null
+    fun onDismissDialog() {
+        _dialogUi.value = DialogUiState()
     }
 
-    fun cancelAddPin() {
-        _pendingLatLng.value = null
-    }
+    fun onAddPin(storeName: String, itemName: String, price: Double) {
+        val current = _dialogUi.value
+        val lat = current.pendingLat ?: return
+        val lng = current.pendingLng ?: return
 
-    // later: add "prune pins older than 7 days" here for weekly refresh logic
+        viewModelScope.launch {
+            val entity = StorePriceEntity(
+                lat = lat,
+                lng = lng,
+                storeName = storeName,
+                itemName = itemName,
+                price = price
+            )
+            storePriceDao.insert(entity)
+            _dialogUi.value = DialogUiState()
+        }
+    }
 }
+
+// mapping helper
+private fun StorePriceEntity.toDomain(): StorePricePin =
+    StorePricePin(
+        id = id,
+        lat = lat,
+        lng = lng,
+        storeName = storeName,
+        itemName = itemName,
+        price = price
+    )
