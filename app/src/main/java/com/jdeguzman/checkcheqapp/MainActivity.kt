@@ -11,6 +11,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.jdeguzman.checkcheqapp.ui.BasketScreen
 import dagger.hilt.android.AndroidEntryPoint
+import com.jdeguzman.checkcheqapp.ui.MyStoresScreen
+import com.jdeguzman.checkcheqapp.ui.MyStoresViewModel
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -28,7 +30,15 @@ class MainActivity : ComponentActivity() {
 fun AppNav() {
     val nav = rememberNavController()
     NavHost(navController = nav, startDestination = "basket") {
-        composable("basket") { BasketScreen() }
-        // composable("compare") { CompareScreen() }
+        composable("basket") {
+            BasketScreen(
+                onCompare = { nav.navigate("map") } // reuse this as "go to map"
+            )
+        }
+        composable("map") {
+            MyStoresScreen(
+                onBack = { nav.popBackStack() }
+            )
+        }
     }
 }

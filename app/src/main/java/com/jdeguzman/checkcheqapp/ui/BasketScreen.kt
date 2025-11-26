@@ -22,6 +22,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 
 @Composable
 fun BasketScreen(
+    onCompare: () -> Unit = {},
     viewModel: BasketViewModel = hiltViewModel()
 ) {
     val basket by viewModel.basket.collectAsState()
@@ -101,6 +102,16 @@ fun BasketScreen(
             ) {
                 Text("Refresh prices")
             }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // --- Map button ---
+        Button(
+            onClick = onCompare,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("View price map")
         }
     }
 }
