@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 3,
-    "identityHash": "0ba269847e0fb0e898a1498a522d6fa3",
+    "identityHash": "dc144ab94607dd9bc9d0a98ac22abe65",
     "entities": [
       {
         "tableName": "items",
@@ -136,12 +136,18 @@
       },
       {
         "tableName": "store_prices",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `lat` REAL NOT NULL, `lng` REAL NOT NULL, `storeName` TEXT NOT NULL, `itemName` TEXT NOT NULL, `price` REAL NOT NULL, `createdAt` INTEGER NOT NULL)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `storeName` TEXT NOT NULL, `lat` REAL NOT NULL, `lng` REAL NOT NULL, `itemName` TEXT NOT NULL, `price` REAL NOT NULL, `currency` TEXT NOT NULL, `photoUrl` TEXT, `createdAt` INTEGER NOT NULL)",
         "fields": [
           {
             "fieldPath": "id",
             "columnName": "id",
             "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "storeName",
+            "columnName": "storeName",
+            "affinity": "TEXT",
             "notNull": true
           },
           {
@@ -157,12 +163,6 @@
             "notNull": true
           },
           {
-            "fieldPath": "storeName",
-            "columnName": "storeName",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
             "fieldPath": "itemName",
             "columnName": "itemName",
             "affinity": "TEXT",
@@ -173,6 +173,18 @@
             "columnName": "price",
             "affinity": "REAL",
             "notNull": true
+          },
+          {
+            "fieldPath": "currency",
+            "columnName": "currency",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "photoUrl",
+            "columnName": "photoUrl",
+            "affinity": "TEXT",
+            "notNull": false
           },
           {
             "fieldPath": "createdAt",
@@ -194,7 +206,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '0ba269847e0fb0e898a1498a522d6fa3')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'dc144ab94607dd9bc9d0a98ac22abe65')"
     ]
   }
 }

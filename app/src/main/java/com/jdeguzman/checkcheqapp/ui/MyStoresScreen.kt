@@ -1,5 +1,8 @@
 package com.jdeguzman.checkcheqapp.ui
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -69,9 +72,9 @@ fun MyStoresScreen(
 
             if (dialogUi.showAddDialog) {
                 AddPriceDialog(
-                    onConfirm = { storeName, itemName, priceText ->
+                    onConfirm = { storeName, itemName, priceText, imageUri ->
                         val price = priceText.toDoubleOrNull() ?: 0.0
-                        viewModel.onAddPin(storeName, itemName, price)
+                        viewModel.onAddPin(storeName, itemName, price, imageUri)
                     },
                     onDismiss = { viewModel.onDismissDialog() }
                 )
@@ -82,12 +85,20 @@ fun MyStoresScreen(
 
 @Composable
 fun AddPriceDialog(
-    onConfirm: (storeName: String, itemName: String, priceText: String) -> Unit,
+    onConfirm: (storeName: String, itemName: String, priceText: String, imageUri: Uri?) -> Unit,
     onDismiss: () -> Unit
 ) {
     var storeName by remember { mutableStateOf("") }
     var itemName by remember { mutableStateOf("") }
     var priceText by remember { mutableStateOf("") }
+
+    // Photo state
+    var imageUri by remember { mutableStateOf<Uri?>(null) }
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        imageUri = uri
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -117,12 +128,28 @@ fun AddPriceDialog(
                         keyboardType = KeyboardType.Number
                     )
                 )
+                Spacer(Modifier.height(12.dp))
+
+                OutlinedButton(
+                    onClick = { photoPickerLauncher.launch("image/*") },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(if (imageUri != null) "Change photo" else "Add photo")
+                }
+
+                if (imageUri != null) {
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        "Photo selected",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
             }
         },
         confirmButton = {
             TextButton(
                 onClick = {
-                    onConfirm(storeName, itemName, priceText)
+                    onConfirm(storeName, itemName, priceText, imageUri)
                 }
             ) {
                 Text("Save")

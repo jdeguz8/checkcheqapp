@@ -82,6 +82,11 @@ dependencies {
     implementation("com.google.maps.android:maps-compose:4.4.1")
     implementation("com.google.android.gms:play-services-maps:18.2.0")
 
+    // Firebase
+    implementation(platform("com.google.firebase:firebase-bom:33.5.1")) // or latest
+    implementation("com.google.firebase:firebase-firestore-ktx")
+    implementation("com.google.firebase:firebase-storage-ktx")
+
 
 
 }

@@ -1,96 +1,87 @@
 package com.jdeguzman.checkcheqapp.ui
 
+import android.net.Uri
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
-import com.jdeguzman.checkcheqapp.data.local.dao.StorePriceDao
-import com.jdeguzman.checkcheqapp.data.local.entity.StorePriceEntity
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+// UI model for a pin on the map
 data class StorePricePin(
     val id: Long,
     val lat: Double,
     val lng: Double,
     val storeName: String,
     val itemName: String,
-    val price: Double
+    val price: Double,
+    val photoUri: String? = null
 )
 
-data class DialogUiState(
+// UI state for the "Add price" dialog
+data class AddDialogUi(
     val showAddDialog: Boolean = false,
-    val pendingLat: Double? = null,
-    val pendingLng: Double? = null
+    val lat: Double? = null,
+    val lng: Double? = null
 )
 
 @HiltViewModel
-class MyStoresViewModel @Inject constructor(
-    private val storePriceDao: StorePriceDao
-) : ViewModel() {
+class MyStoresViewModel @Inject constructor() : ViewModel() {
 
-    // pins coming from Room
-    val pins: StateFlow<List<StorePricePin>> =
-        storePriceDao.observeAll()
-            .map { list ->
-                list.map { it.toDomain() }
-            }
-            .stateIn(
-                scope = viewModelScope,
-                started = SharingStarted.WhileSubscribed(5000L),
-                initialValue = emptyList()
-            )
+    // All map pins to render
+    private val _pins = MutableStateFlow<List<StorePricePin>>(emptyList())
+    val pins: StateFlow<List<StorePricePin>> = _pins.asStateFlow()
 
-    // dialog / pending location state
-    private val _dialogUi = MutableStateFlow(DialogUiState())
-    val dialogUi: StateFlow<DialogUiState> = _dialogUi.asStateFlow()
+    // Dialog state
+    private val _dialogUi = MutableStateFlow(AddDialogUi())
+    val dialogUi: StateFlow<AddDialogUi> = _dialogUi.asStateFlow()
 
+    /**
+     * Called from GoogleMap.onMapLongClick().
+     */
     fun onMapLongClick(lat: Double, lng: Double) {
-        _dialogUi.update {
-            it.copy(
-                showAddDialog = true,
-                pendingLat = lat,
-                pendingLng = lng
-            )
-        }
+        _dialogUi.value = AddDialogUi(
+            showAddDialog = true,
+            lat = lat,
+            lng = lng
+        )
     }
 
     fun onDismissDialog() {
-        _dialogUi.value = DialogUiState()
+        _dialogUi.value = AddDialogUi()
     }
 
-    fun onAddPin(storeName: String, itemName: String, price: Double) {
-        val current = _dialogUi.value
-        val lat = current.pendingLat ?: return
-        val lng = current.pendingLng ?: return
+    /**
+     * Called by AddPriceDialog when the user taps "Save".
+     */
+    fun onAddPin(
+        storeName: String,
+        itemName: String,
+        price: Double,
+        imageUri: Uri?
+    ) {
+        val dialogSnapshot = _dialogUi.value
+        val lat = dialogSnapshot.lat
+        val lng = dialogSnapshot.lng
 
-        viewModelScope.launch {
-            val entity = StorePriceEntity(
-                lat = lat,
-                lng = lng,
-                storeName = storeName,
-                itemName = itemName,
-                price = price
-            )
-            storePriceDao.insert(entity)
-            _dialogUi.value = DialogUiState()
+        // Safety check – should not really happen but avoids crashes
+        if (!dialogSnapshot.showAddDialog || lat == null || lng == null) {
+            _dialogUi.value = AddDialogUi()
+            return
         }
+
+        val newPin = StorePricePin(
+            id = System.currentTimeMillis(), // simple unique-ish ID
+            lat = lat,
+            lng = lng,
+            storeName = storeName,
+            itemName = itemName,
+            price = price,
+            photoUri = imageUri?.toString()
+        )
+
+        _pins.value = _pins.value + newPin
+        _dialogUi.value = AddDialogUi()
     }
 }
-
-// mapping helper
-private fun StorePriceEntity.toDomain(): StorePricePin =
-    StorePricePin(
-        id = id,
-        lat = lat,
-        lng = lng,
-        storeName = storeName,
-        itemName = itemName,
-        price = price
-    )

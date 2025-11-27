@@ -17,7 +17,7 @@ import com.jdeguzman.checkcheqapp.data.local.dao.ItemDao
         PriceEntity::class,
         StorePriceEntity::class
     ],
-    version = 3,           // ⬅ bumped from 2 → 3
+    version = 4,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {

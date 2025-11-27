@@ -1,31 +1,25 @@
-// data/repository/PriceRepository.kt
 package com.jdeguzman.checkcheqapp.data.repository
 
-import com.jdeguzman.checkcheqapp.data.local.dao.ItemDao
-import com.jdeguzman.checkcheqapp.data.local.dao.BasketDao
-import com.jdeguzman.checkcheqapp.data.remote.ApiService
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import com.jdeguzman.checkcheqapp.data.local.dao.PriceDao
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * Repository for price-related operations.
+ *
+ * Right now this is just a stub – we’re not calling any API or Firebase yet.
+ * Later we can add those here and still keep the rest of the app the same.
+ */
 @Singleton
 class PriceRepository @Inject constructor(
-    private val api: ApiService,
-    private val itemDao: ItemDao,
-    private val basketDao: BasketDao
+    private val priceDao: PriceDao
 ) {
     /**
-     * Fetch fresh prices for the given product names and update DB.
-     * Adjust to your real API / DTO mapping.
+     * Called from BasketViewModel.refreshPrices().
+     * Currently a no-op so the app builds and runs.
      */
-    suspend fun refreshForBasket(names: List<String>) = withContext(Dispatchers.IO) {
-        // Example: call API
-        // val dtoList = api.getPrices(names)  // implement this on ApiService
-        // val entities: List<ItemEntity> = dtoList.map { it.toItemEntity() }
-        // itemDao.upsertAll(entities)
-
-        // TEMP no-op so you can compile:
-        // remove when your API is wired up
+    suspend fun refreshForBasket(names: List<String>) {
+        // TODO: in the future, fetch prices from network/Firebase and
+        // write them into Room using priceDao.
     }
 }
