@@ -41,7 +41,14 @@ The next step in the project is **Firebase Firestore sync + user photo uploads**
 - User-submitted price photos  
 - Cross-device functionality
 
+- Update: November 27 
+Decided to take a different route on the app and move from add to basket and track on map style to a user interaction with the maps and adding posts and view on a feed style so users can view and contribute on grocery deals across the city. This will allow both users to view and contribute. Will be implmenting 3 screens for this such as the main feed, the map and a settings option.
+
+Branch has been made with the changes "feed-map-settings-layout"
+
 ---
+
+
 
 ## Features
 
