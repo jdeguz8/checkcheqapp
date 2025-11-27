@@ -1,6 +1,5 @@
 package com.jdeguzman.checkcheqapp.ui
 
-import android.net.Uri
 import androidx.lifecycle.ViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -8,80 +7,90 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import javax.inject.Inject
 
-// UI model for a pin on the map
-data class StorePricePin(
-    val id: Long,
-    val lat: Double,
-    val lng: Double,
-    val storeName: String,
-    val itemName: String,
-    val price: Double,
-    val photoUri: String? = null
-)
-
-// UI state for the "Add price" dialog
-data class AddDialogUi(
-    val showAddDialog: Boolean = false,
-    val lat: Double? = null,
-    val lng: Double? = null
-)
-
+/**
+ * Shared VM for map + feed.
+ * Holds a list of price posts (pins) entirely in memory for now.
+ */
 @HiltViewModel
 class MyStoresViewModel @Inject constructor() : ViewModel() {
 
-    // All map pins to render
-    private val _pins = MutableStateFlow<List<StorePricePin>>(emptyList())
-    val pins: StateFlow<List<StorePricePin>> = _pins.asStateFlow()
+    // One crowd-sourced post
+    data class PricePost(
+        val id: String,
+        val storeName: String,
+        val itemName: String,
+        val price: Double,
+        val currency: String = "CAD",
+        val lat: Double,
+        val lng: Double,
+        val photoUrl: String? = null,
+        val createdAt: Long = System.currentTimeMillis()
+    )
+
+    // UI state for the “add price” dialog
+    data class DialogUi(
+        val showAddDialog: Boolean = false,
+        val pendingLat: Double? = null,
+        val pendingLng: Double? = null
+    )
+
+    // All posts/pins currently in the app
+    private val _pins = MutableStateFlow<List<PricePost>>(seedFakePosts())
+    val pins: StateFlow<List<PricePost>> = _pins.asStateFlow()
 
     // Dialog state
-    private val _dialogUi = MutableStateFlow(AddDialogUi())
-    val dialogUi: StateFlow<AddDialogUi> = _dialogUi.asStateFlow()
+    private val _dialogUi = MutableStateFlow(DialogUi())
+    val dialogUi: StateFlow<DialogUi> = _dialogUi.asStateFlow()
 
-    /**
-     * Called from GoogleMap.onMapLongClick().
-     */
+    /** User long-presses map → remember location and show dialog */
     fun onMapLongClick(lat: Double, lng: Double) {
-        _dialogUi.value = AddDialogUi(
+        _dialogUi.value = DialogUi(
             showAddDialog = true,
+            pendingLat = lat,
+            pendingLng = lng
+        )
+    }
+
+    /** User hits “Save” in dialog → create a new post pinned to that location */
+    fun onAddPin(storeName: String, itemName: String, price: Double) {
+        val dialog = _dialogUi.value
+        val lat = dialog.pendingLat ?: return
+        val lng = dialog.pendingLng ?: return
+
+        val newPost = PricePost(
+            id = System.currentTimeMillis().toString(),
+            storeName = storeName.ifBlank { "Unknown store" },
+            itemName = itemName.ifBlank { "Unknown item" },
+            price = price,
             lat = lat,
             lng = lng
         )
+
+        _pins.value = _pins.value + newPost
+        _dialogUi.value = DialogUi() // reset dialog
     }
 
     fun onDismissDialog() {
-        _dialogUi.value = AddDialogUi()
+        _dialogUi.value = DialogUi()
     }
 
-    /**
-     * Called by AddPriceDialog when the user taps "Save".
-     */
-    fun onAddPin(
-        storeName: String,
-        itemName: String,
-        price: Double,
-        imageUri: Uri?
-    ) {
-        val dialogSnapshot = _dialogUi.value
-        val lat = dialogSnapshot.lat
-        val lng = dialogSnapshot.lng
-
-        // Safety check – should not really happen but avoids crashes
-        if (!dialogSnapshot.showAddDialog || lat == null || lng == null) {
-            _dialogUi.value = AddDialogUi()
-            return
-        }
-
-        val newPin = StorePricePin(
-            id = System.currentTimeMillis(), // simple unique-ish ID
-            lat = lat,
-            lng = lng,
-            storeName = storeName,
-            itemName = itemName,
-            price = price,
-            photoUri = imageUri?.toString()
+    // Some starter posts so the feed/map don’t look empty
+    private fun seedFakePosts(): List<PricePost> = listOf(
+        PricePost(
+            id = "1",
+            storeName = "Superstore Kenaston",
+            itemName = "2L Milk",
+            price = 4.49,
+            lat = 49.84,
+            lng = -97.20
+        ),
+        PricePost(
+            id = "2",
+            storeName = "Walmart Polo Park",
+            itemName = "Dozen Eggs",
+            price = 3.99,
+            lat = 49.88,
+            lng = -97.19
         )
-
-        _pins.value = _pins.value + newPin
-        _dialogUi.value = AddDialogUi()
-    }
+    )
 }

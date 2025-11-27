@@ -1,9 +1,11 @@
 package com.jdeguzman.checkcheqapp.ui
 
-import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -23,7 +25,7 @@ import com.google.maps.android.compose.rememberCameraPositionState
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MyStoresScreen(
-    onBack: () -> Unit,
+    onBack: (() -> Unit)? = null,
     viewModel: MyStoresViewModel = hiltViewModel()
 ) {
     val pins by viewModel.pins.collectAsState()
@@ -39,8 +41,13 @@ fun MyStoresScreen(
             TopAppBar(
                 title = { Text("CheckCheq price map") },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
+                    if (onBack != null) {
+                        IconButton(onClick = onBack) {
+                            Icon(
+                                imageVector = Icons.Filled.ArrowBack,
+                                contentDescription = "Back"
+                            )
+                        }
                     }
                 }
             )
@@ -72,9 +79,9 @@ fun MyStoresScreen(
 
             if (dialogUi.showAddDialog) {
                 AddPriceDialog(
-                    onConfirm = { storeName, itemName, priceText, imageUri ->
+                    onConfirm = { storeName, itemName, priceText ->
                         val price = priceText.toDoubleOrNull() ?: 0.0
-                        viewModel.onAddPin(storeName, itemName, price, imageUri)
+                        viewModel.onAddPin(storeName, itemName, price)
                     },
                     onDismiss = { viewModel.onDismissDialog() }
                 )
@@ -85,20 +92,12 @@ fun MyStoresScreen(
 
 @Composable
 fun AddPriceDialog(
-    onConfirm: (storeName: String, itemName: String, priceText: String, imageUri: Uri?) -> Unit,
+    onConfirm: (storeName: String, itemName: String, priceText: String) -> Unit,
     onDismiss: () -> Unit
 ) {
     var storeName by remember { mutableStateOf("") }
     var itemName by remember { mutableStateOf("") }
     var priceText by remember { mutableStateOf("") }
-
-    // Photo state
-    var imageUri by remember { mutableStateOf<Uri?>(null) }
-    val photoPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri ->
-        imageUri = uri
-    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -109,49 +108,27 @@ fun AddPriceDialog(
                     value = storeName,
                     onValueChange = { storeName = it },
                     label = { Text("Store name") },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxSize()
                 )
                 Spacer(Modifier.height(8.dp))
                 OutlinedTextField(
                     value = itemName,
                     onValueChange = { itemName = it },
-                    label = { Text("Item name") },
-                    modifier = Modifier.fillMaxWidth()
+                    label = { Text("Item name") }
                 )
                 Spacer(Modifier.height(8.dp))
                 OutlinedTextField(
                     value = priceText,
                     onValueChange = { priceText = it },
                     label = { Text("Price") },
-                    modifier = Modifier.fillMaxWidth(),
                     keyboardOptions = KeyboardOptions(
                         keyboardType = KeyboardType.Number
                     )
                 )
-                Spacer(Modifier.height(12.dp))
-
-                OutlinedButton(
-                    onClick = { photoPickerLauncher.launch("image/*") },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(if (imageUri != null) "Change photo" else "Add photo")
-                }
-
-                if (imageUri != null) {
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        "Photo selected",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
             }
         },
         confirmButton = {
-            TextButton(
-                onClick = {
-                    onConfirm(storeName, itemName, priceText, imageUri)
-                }
-            ) {
+            TextButton(onClick = { onConfirm(storeName, itemName, priceText) }) {
                 Text("Save")
             }
         },
