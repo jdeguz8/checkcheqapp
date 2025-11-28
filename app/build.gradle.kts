@@ -35,6 +35,8 @@ android {
 
 dependencies {
     implementation(libs.androidx.foundation.layout)
+    implementation(libs.androidx.foundation)
+    implementation(libs.material3)
     // Compose
     val composeBom = platform("androidx.compose:compose-bom:2024.09.02")
     implementation(composeBom)
@@ -87,6 +89,12 @@ dependencies {
     implementation(platform("com.google.firebase:firebase-bom:33.5.1")) // or latest
     implementation("com.google.firebase:firebase-firestore-ktx")
     implementation("com.google.firebase:firebase-storage-ktx")
+
+    implementation("io.coil-kt:coil-compose:2.6.0")
+
+    //location
+    implementation("com.google.android.gms:play-services-location:21.0.1")
+
 
 
 

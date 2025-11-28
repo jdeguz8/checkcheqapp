@@ -8,11 +8,17 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.*
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -21,6 +27,8 @@ import com.jdeguzman.checkcheqapp.ui.FeedScreen
 import com.jdeguzman.checkcheqapp.ui.MyStoresScreen
 import com.jdeguzman.checkcheqapp.ui.SettingsScreen
 import dagger.hilt.android.AndroidEntryPoint
+import com.jdeguzman.checkcheqapp.ui.MyStoresViewModel
+
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -28,52 +36,66 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             Surface(color = MaterialTheme.colorScheme.background) {
-                AppNav()
+                CheckCheqAppRoot()
             }
         }
     }
 }
 
-private data class BottomNavItem(
-    val route: String,
-    val label: String,
-    val icon: ImageVector
-)
-
 @Composable
-fun AppNav() {
+fun CheckCheqAppRoot() {
     val navController = rememberNavController()
+    val backStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = backStackEntry?.destination?.route ?: "feed"
 
-    val items = listOf(
-        BottomNavItem("feed", "Feed", Icons.Filled.List),
-        BottomNavItem("map", "Map", Icons.Filled.Map),
-        BottomNavItem("settings", "Settings", Icons.Filled.Settings)
-    )
+    // 🔥 One shared VM for map + feed
+    val myStoresViewModel: MyStoresViewModel = hiltViewModel()
 
     Scaffold(
         bottomBar = {
             NavigationBar {
-                val navBackStackEntry by navController.currentBackStackEntryAsState()
-                val currentRoute = navBackStackEntry?.destination?.route
-
-                items.forEach { item ->
-                    NavigationBarItem(
-                        selected = currentRoute == item.route,
-                        onClick = {
-                            if (currentRoute != item.route) {
-                                navController.navigate(item.route) {
-                                    popUpTo(navController.graph.startDestinationId) {
-                                        saveState = true
-                                    }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
+                NavigationBarItem(
+                    selected = currentRoute == "feed",
+                    onClick = {
+                        navController.navigate("feed") {
+                            popUpTo(navController.graph.startDestinationId) {
+                                saveState = true
                             }
-                        },
-                        icon = { Icon(item.icon, contentDescription = item.label) },
-                        label = { Text(item.label) }
-                    )
-                }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    icon = { Icon(Icons.Default.List, "Feed") },
+                    label = { Text("Feed") }
+                )
+                NavigationBarItem(
+                    selected = currentRoute == "map",
+                    onClick = {
+                        navController.navigate("map") {
+                            popUpTo(navController.graph.startDestinationId) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    icon = { Icon(Icons.Default.Map, "Map") },
+                    label = { Text("Map") }
+                )
+                NavigationBarItem(
+                    selected = currentRoute == "settings",
+                    onClick = {
+                        navController.navigate("settings") {
+                            popUpTo(navController.graph.startDestinationId) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    icon = { Icon(Icons.Default.Settings, "Settings") },
+                    label = { Text("Settings") }
+                )
             }
         }
     ) { innerPadding ->
@@ -82,9 +104,22 @@ fun AppNav() {
             startDestination = "feed",
             modifier = Modifier.padding(innerPadding)
         ) {
-            composable("feed") { FeedScreen() }
-            composable("map") { MyStoresScreen() }
-            composable("settings") { SettingsScreen() }
+            composable("feed") {
+                FeedScreen(
+                    viewModel = myStoresViewModel,
+                    onOpenMap = { navController.navigate("map") }
+                )
+            }
+            composable("map") {
+                MyStoresScreen(
+                    onBack = { navController.navigate("feed") },
+                    viewModel = myStoresViewModel
+                )
+            }
+            composable("settings") {
+                SettingsScreen()
+            }
         }
     }
 }
+
