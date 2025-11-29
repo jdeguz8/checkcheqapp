@@ -1,4 +1,3 @@
-// AppModule.kt
 package com.jdeguzman.checkcheqapp.di
 
 import android.content.Context
@@ -15,6 +14,8 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.storage.FirebaseStorage
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -35,4 +36,12 @@ object AppModule {
     @Singleton
     fun providePricePostRepository(dao: PricePostDao): PricePostRepository =
         RoomPricePostRepository(dao)
+
+    @Provides
+    @Singleton
+    fun provideFirestore(): FirebaseFirestore = FirebaseFirestore.getInstance()
+
+    @Provides
+    @Singleton
+    fun provideFirebaseStorage(): FirebaseStorage = FirebaseStorage.getInstance()
 }

@@ -6,6 +6,7 @@ plugins {
     id("com.google.dagger.hilt.android")
     id("com.google.android.libraries.mapsplatform.secrets-gradle-plugin")
     id("androidx.room")
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -37,6 +38,7 @@ dependencies {
     implementation(libs.androidx.foundation.layout)
     implementation(libs.androidx.foundation)
     implementation(libs.material3)
+    implementation(libs.ui)
     // Compose
     val composeBom = platform("androidx.compose:compose-bom:2024.09.02")
     implementation(composeBom)

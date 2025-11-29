@@ -1,6 +1,7 @@
 package com.jdeguzman.checkcheqapp
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.padding
@@ -28,12 +29,28 @@ import com.jdeguzman.checkcheqapp.ui.MyStoresScreen
 import com.jdeguzman.checkcheqapp.ui.SettingsScreen
 import dagger.hilt.android.AndroidEntryPoint
 import com.jdeguzman.checkcheqapp.ui.MyStoresViewModel
+import com.google.firebase.firestore.FirebaseFirestore
+
 
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val db = FirebaseFirestore.getInstance()
+        db.collection("debug_tests")
+            .add(
+                mapOf(
+                    "message" to "Hello from CheckCheq",
+                    "time" to System.currentTimeMillis()
+                )
+            )
+            .addOnSuccessListener { docRef ->
+                Log.d("FirestoreTest", "Added doc ${docRef.id}")
+            }
+            .addOnFailureListener { e ->
+                Log.e("FirestoreTest", "Error writing document", e)
+            }
         setContent {
             Surface(color = MaterialTheme.colorScheme.background) {
                 CheckCheqAppRoot()

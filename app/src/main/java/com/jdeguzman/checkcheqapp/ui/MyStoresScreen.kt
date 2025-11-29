@@ -12,6 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
@@ -28,6 +29,7 @@ import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
+import android.location.Location
 
 @OptIn(ExperimentalMaterial3Api::class)
 @SuppressLint("MissingPermission") // we gate location features behind permission checks
@@ -94,6 +96,28 @@ fun MyStoresScreen(
         }
     }
 
+    // --- Near-me filter state for map ---
+    var nearMeOnly by remember { mutableStateOf(false) }
+
+    val visiblePins = remember(pins, myLocation, nearMeOnly) {
+        val origin = myLocation  // local snapshot
+
+        if (!nearMeOnly || origin == null) {
+            pins
+        } else {
+            pins.filter { post ->
+                val dist = computeDistanceMeters(
+                    userLat = origin.latitude,
+                    userLng = origin.longitude,
+                    postLat = post.lat,
+                    postLng = post.lng
+                )
+                dist != null && dist <= 1000f   // ≤ 1km
+            }
+        }
+    }
+
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -131,12 +155,38 @@ fun MyStoresScreen(
                     )
                 }
             ) {
-                pins.forEach { pin ->
+                visiblePins.forEach { pin ->
                     Marker(
                         state = MarkerState(LatLng(pin.lat, pin.lng)),
                         title = "${pin.storeName} - ${pin.itemName}",
                         snippet = "$${"%.2f".format(pin.price)}"
                     )
+                }
+            }
+
+            // Near-me toggle overlay (if we have location)
+            if (hasLocationPermission && myLocation != null) {
+                Card(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(16.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Near me (≤ 1 km)",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Switch(
+                            checked = nearMeOnly,
+                            onCheckedChange = { nearMeOnly = it }
+                        )
+                    }
                 }
             }
 
@@ -152,6 +202,31 @@ fun MyStoresScreen(
         }
     }
 }
+
+/**
+ * Small helper for distance in meters.
+ */
+/**
+ * Small helper for distance in meters.
+ */
+private fun computeDistanceMeters(
+    userLat: Double,
+    userLng: Double,
+    postLat: Double,
+    postLng: Double
+): Float? {
+    val results = FloatArray(1)
+    Location.distanceBetween(
+        userLat,
+        userLng,
+        postLat,
+        postLng,
+        results
+    )
+    return results[0]
+}
+
+
 
 @Composable
 fun AddPriceDialog(
@@ -228,12 +303,21 @@ fun AddPriceDialog(
         confirmButton = {
             TextButton(
                 onClick = {
+                    // (Optional) guard: don’t save empty store/item
+                    if (storeName.isBlank() || itemName.isBlank() || priceText.isBlank()) {
+                        // you could show a Snackbar or error later
+                        return@TextButton
+                    }
+
                     onConfirm(
                         storeName.trim(),
                         itemName.trim(),
                         priceText.trim(),
                         pickedPhotoUri?.toString()
                     )
+
+                    // 🔒 Close the dialog so we don't create duplicates
+                    onDismiss()
                 }
             ) {
                 Text("Save")
@@ -246,3 +330,4 @@ fun AddPriceDialog(
         }
     )
 }
+

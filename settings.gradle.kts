@@ -13,6 +13,8 @@ pluginManagement {
         id("com.google.android.libraries.mapsplatform.secrets-gradle-plugin") version "2.0.1"
         // Room Gradle plugin (silences the exportSchema warning)
         id("androidx.room") version "2.6.1"
+        id("com.google.gms.google-services") version "4.4.2"
+
     }
 }
 

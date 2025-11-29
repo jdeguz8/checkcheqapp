@@ -6,6 +6,6 @@ import kotlinx.coroutines.flow.Flow
 
 interface PricePostRepository {
     fun observePosts(): Flow<List<PricePost>>
-    suspend fun add(post: PricePost)
+    suspend fun add(post: PricePost): Long   // ⬅️ return id
     suspend fun clear()
 }
