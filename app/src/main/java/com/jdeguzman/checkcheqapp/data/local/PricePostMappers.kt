@@ -11,8 +11,10 @@ fun PricePostEntity.toDomain(): PricePost =
         price = price,
         lat = lat,
         lng = lng,
-        photoUri   = photoUri,
-        createdAt = createdAt
+        photoUri = photoUri,
+        createdAt = createdAt,
+        category = category,
+        postedBy = postedBy
     )
 
 fun PricePost.toEntity(): PricePostEntity =
@@ -24,5 +26,7 @@ fun PricePost.toEntity(): PricePostEntity =
         lat = lat,
         lng = lng,
         photoUri = photoUri,
-        createdAt = createdAt
+        createdAt = createdAt,
+        category = category,
+        postedBy = postedBy
     )

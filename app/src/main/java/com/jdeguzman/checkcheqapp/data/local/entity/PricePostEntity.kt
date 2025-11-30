@@ -14,6 +14,8 @@ data class PricePostEntity(
     val price: Double,
     val lat: Double,
     val lng: Double,
-    val photoUri: String?,        // same name as domain
-    val createdAt: Long           // millis since epoch
+    val photoUri: String?,
+    val createdAt: Long,
+    val category: String? = null,
+    val postedBy: String? = null
 )

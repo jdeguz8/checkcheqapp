@@ -192,9 +192,9 @@ fun MyStoresScreen(
 
             if (dialogUi.showAddDialog) {
                 AddPriceDialog(
-                    onConfirm = { storeName, itemName, priceText, photoUri ->
+                    onConfirm = { storeName, itemName, priceText, photoUri, category ->
                         val price = priceText.toDoubleOrNull() ?: 0.0
-                        viewModel.onAddPin(storeName, itemName, price, photoUri)
+                        viewModel.onAddPin(storeName, itemName, price, photoUri, category)
                     },
                     onDismiss = { viewModel.onDismissDialog() }
                 )
@@ -228,13 +228,15 @@ private fun computeDistanceMeters(
 
 
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddPriceDialog(
     onConfirm: (
         storeName: String,
         itemName: String,
         priceText: String,
-        photoUri: String?
+        photoUri: String?,
+        category: String?           // 👈 NEW
     ) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -242,6 +244,11 @@ fun AddPriceDialog(
     var itemName by remember { mutableStateOf("") }
     var priceText by remember { mutableStateOf("") }
     var pickedPhotoUri by remember { mutableStateOf<Uri?>(null) }
+
+    // category selection
+    val categoryOptions = listOf("Grocery", "Restaurant", "Cafe", "Bakery", "Fast food", "Other")
+    var categoryExpanded by remember { mutableStateOf(false) }
+    var selectedCategory by remember { mutableStateOf<String?>(null) }
 
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -251,20 +258,20 @@ fun AddPriceDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Add store price") },
+        title = { Text("Add price post") },
         text = {
             Column {
                 OutlinedTextField(
                     value = storeName,
                     onValueChange = { storeName = it },
-                    label = { Text("Store name") },
+                    label = { Text("Store / restaurant name") },
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(Modifier.height(8.dp))
                 OutlinedTextField(
                     value = itemName,
                     onValueChange = { itemName = it },
-                    label = { Text("Item name") },
+                    label = { Text("Item / dish name") },
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(Modifier.height(8.dp))
@@ -277,6 +284,39 @@ fun AddPriceDialog(
                         keyboardType = KeyboardType.Number
                     )
                 )
+                Spacer(Modifier.height(8.dp))
+
+                // Category dropdown
+                ExposedDropdownMenuBox(
+                    expanded = categoryExpanded,
+                    onExpandedChange = { categoryExpanded = !categoryExpanded }
+                ) {
+                    OutlinedTextField(
+                        value = selectedCategory ?: "",
+                        onValueChange = { },
+                        readOnly = true,
+                        label = { Text("Category") },
+                        placeholder = { Text("Grocery, Restaurant…") },
+                        modifier = Modifier
+                            .menuAnchor()
+                            .fillMaxWidth()
+                    )
+                    ExposedDropdownMenu(
+                        expanded = categoryExpanded,
+                        onDismissRequest = { categoryExpanded = false }
+                    ) {
+                        categoryOptions.forEach { option ->
+                            DropdownMenuItem(
+                                text = { Text(option) },
+                                onClick = {
+                                    selectedCategory = option
+                                    categoryExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+
                 Spacer(Modifier.height(12.dp))
 
                 Button(
@@ -303,21 +343,13 @@ fun AddPriceDialog(
         confirmButton = {
             TextButton(
                 onClick = {
-                    // (Optional) guard: don’t save empty store/item
-                    if (storeName.isBlank() || itemName.isBlank() || priceText.isBlank()) {
-                        // you could show a Snackbar or error later
-                        return@TextButton
-                    }
-
                     onConfirm(
                         storeName.trim(),
                         itemName.trim(),
                         priceText.trim(),
-                        pickedPhotoUri?.toString()
+                        pickedPhotoUri?.toString(),
+                        selectedCategory
                     )
-
-                    // 🔒 Close the dialog so we don't create duplicates
-                    onDismiss()
                 }
             ) {
                 Text("Save")
@@ -330,4 +362,3 @@ fun AddPriceDialog(
         }
     )
 }
-

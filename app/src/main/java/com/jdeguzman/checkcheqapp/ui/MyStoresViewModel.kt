@@ -18,6 +18,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import androidx.core.net.toUri
+import com.google.firebase.auth.FirebaseAuth
+
 
 @HiltViewModel
 class MyStoresViewModel @Inject constructor(
@@ -27,6 +29,7 @@ class MyStoresViewModel @Inject constructor(
     // --- Firebase instances ---
     private val firestore = FirebaseFirestore.getInstance()
     private val storage = FirebaseStorage.getInstance("gs://checkcheq-demo.firebasestorage.app")
+    private val auth: FirebaseAuth = FirebaseAuth.getInstance()
 
     // UI state for the "add pin" dialog
     data class DialogUi(
@@ -63,29 +66,37 @@ class MyStoresViewModel @Inject constructor(
         storeName: String,
         itemName: String,
         price: Double,
-        photoUri: String?
+        photoUri: String?,
+        category: String?      // 👈 now passed from dialog
     ) {
         val lat = _dialogUi.value.lat ?: return
         val lng = _dialogUi.value.lng ?: return
 
-        val basePost = PricePost(
+        // --- build "postedBy" from Firebase user ---
+        val user = auth.currentUser
+        val postedBy = user?.displayName
+            ?: user?.email
+            ?: "Anonymous"
+
+        val post = PricePost(
             id = 0L,
             storeName = storeName.trim(),
             itemName = itemName.trim(),
             price = price,
             lat = lat,
             lng = lng,
-            photoUri = photoUri, // local URI initially
-            createdAt = System.currentTimeMillis()
+            photoUri = photoUri, // local URI for UI / Room
+            createdAt = System.currentTimeMillis(),
+            category = category,
+            postedBy = postedBy   // 👈 NEW
         )
 
         viewModelScope.launch {
-            // 1) Save to Room, get generated ID
-            val newId = try {
-                repo.add(basePost)
+            // 1) Save to Room (offline + feed UI)
+            try {
+                repo.add(post)
             } catch (e: Exception) {
                 Log.e("CheckCheq", "Room insert failed", e)
-                -1L
             }
 
             // 2) Upload photo to Firebase Storage (if there is one)
@@ -96,17 +107,18 @@ class MyStoresViewModel @Inject constructor(
                 null
             }
 
-            // 3) Save Firestore doc with cloud photo URL (or fallback)
-            val finalPhotoUrl = remotePhotoUrl ?: basePost.photoUri
-
+            // 3) Save Firestore doc with cloud photo URL + metadata
             val data = mapOf(
-                "storeName" to basePost.storeName,
-                "itemName" to basePost.itemName,
-                "price" to basePost.price,
-                "lat" to basePost.lat,
-                "lng" to basePost.lng,
-                "photoUrl" to finalPhotoUrl,
-                "createdAt" to basePost.createdAt
+                "storeName" to post.storeName,
+                "itemName" to post.itemName,
+                "price" to post.price,
+                "lat" to post.lat,
+                "lng" to post.lng,
+                "photoUrl" to (remotePhotoUrl ?: post.photoUri),
+                "createdAt" to post.createdAt,
+                "category" to post.category,
+                "postedBy" to post.postedBy,
+                "userId" to user?.uid
             )
 
             firestore.collection("price_posts")
@@ -118,24 +130,9 @@ class MyStoresViewModel @Inject constructor(
                     Log.e("CheckCheq", "Failed to save post to Firestore", e)
                 }
 
-            // 4) If we have a remote URL and a valid Room row, update local row too
-            if (remotePhotoUrl != null && newId > 0L) {
-                val updatedPost = basePost.copy(
-                    id = newId,
-                    photoUri = remotePhotoUrl
-                )
-                try {
-                    repo.add(updatedPost)   // REPLACE same row with cloud URL
-                    Log.d("CheckCheq", "Updated local post with remote photo URL")
-                } catch (e: Exception) {
-                    Log.e("CheckCheq", "Failed to update local post with remote URL", e)
-                }
-            }
-
             _dialogUi.value = DialogUi()
         }
     }
-
 
     fun clearAllPosts() {
         viewModelScope.launch {

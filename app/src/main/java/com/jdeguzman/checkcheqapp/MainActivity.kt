@@ -1,7 +1,6 @@
 package com.jdeguzman.checkcheqapp
 
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.padding
@@ -17,6 +16,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -24,36 +24,31 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.jdeguzman.checkcheqapp.ui.AuthScreen
+import com.jdeguzman.checkcheqapp.ui.AuthViewModel
 import com.jdeguzman.checkcheqapp.ui.FeedScreen
 import com.jdeguzman.checkcheqapp.ui.MyStoresScreen
+import com.jdeguzman.checkcheqapp.ui.MyStoresViewModel
+import com.jdeguzman.checkcheqapp.ui.PricePostDetailsScreen
 import com.jdeguzman.checkcheqapp.ui.SettingsScreen
 import dagger.hilt.android.AndroidEntryPoint
-import com.jdeguzman.checkcheqapp.ui.MyStoresViewModel
-import com.google.firebase.firestore.FirebaseFirestore
-
-
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val db = FirebaseFirestore.getInstance()
-        db.collection("debug_tests")
-            .add(
-                mapOf(
-                    "message" to "Hello from CheckCheq",
-                    "time" to System.currentTimeMillis()
-                )
-            )
-            .addOnSuccessListener { docRef ->
-                Log.d("FirestoreTest", "Added doc ${docRef.id}")
-            }
-            .addOnFailureListener { e ->
-                Log.e("FirestoreTest", "Error writing document", e)
-            }
         setContent {
+            val authViewModel: AuthViewModel = hiltViewModel()
+            val authState by authViewModel.uiState.collectAsState()
+
             Surface(color = MaterialTheme.colorScheme.background) {
-                CheckCheqAppRoot()
+                if (authState.isSignedIn) {
+                    // Main app when signed in
+                    CheckCheqAppRoot()
+                } else {
+                    // Google sign-in screen
+                    AuthScreen(authViewModel = authViewModel)
+                }
             }
         }
     }
@@ -65,7 +60,7 @@ fun CheckCheqAppRoot() {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route ?: "feed"
 
-    // 🔥 One shared VM for map + feed
+    // Shared VM for map + feed
     val myStoresViewModel: MyStoresViewModel = hiltViewModel()
 
     Scaffold(
@@ -82,7 +77,7 @@ fun CheckCheqAppRoot() {
                             restoreState = true
                         }
                     },
-                    icon = { Icon(Icons.Default.List, "Feed") },
+                    icon = { Icon(Icons.Default.List, contentDescription = "Feed") },
                     label = { Text("Feed") }
                 )
                 NavigationBarItem(
@@ -96,7 +91,7 @@ fun CheckCheqAppRoot() {
                             restoreState = true
                         }
                     },
-                    icon = { Icon(Icons.Default.Map, "Map") },
+                    icon = { Icon(Icons.Default.Map, contentDescription = "Map") },
                     label = { Text("Map") }
                 )
                 NavigationBarItem(
@@ -110,7 +105,7 @@ fun CheckCheqAppRoot() {
                             restoreState = true
                         }
                     },
-                    icon = { Icon(Icons.Default.Settings, "Settings") },
+                    icon = { Icon(Icons.Default.Settings, contentDescription = "Settings") },
                     label = { Text("Settings") }
                 )
             }
@@ -124,7 +119,10 @@ fun CheckCheqAppRoot() {
             composable("feed") {
                 FeedScreen(
                     viewModel = myStoresViewModel,
-                    onOpenMap = { navController.navigate("map") }
+                    onOpenMap = { navController.navigate("map") },
+                    onOpenPostDetails = { postId ->
+                        navController.navigate("details/$postId")
+                    }
                 )
             }
             composable("map") {
@@ -136,7 +134,14 @@ fun CheckCheqAppRoot() {
             composable("settings") {
                 SettingsScreen()
             }
+            composable("details/{postId}") { backStackEntry ->
+                val postId = backStackEntry.arguments?.getString("postId")?.toLongOrNull() ?: -1L
+                PricePostDetailsScreen(
+                    postId = postId,
+                    viewModel = myStoresViewModel,
+                    onBack = { navController.popBackStack() }
+                )
+            }
         }
     }
 }
-

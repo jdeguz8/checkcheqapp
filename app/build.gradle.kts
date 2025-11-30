@@ -39,6 +39,10 @@ dependencies {
     implementation(libs.androidx.foundation)
     implementation(libs.material3)
     implementation(libs.ui)
+    implementation(libs.firebase.auth)
+    implementation(libs.androidx.credentials)
+    implementation(libs.androidx.credentials.play.services.auth)
+    implementation(libs.googleid)
     // Compose
     val composeBom = platform("androidx.compose:compose-bom:2024.09.02")
     implementation(composeBom)
@@ -80,6 +84,8 @@ dependencies {
     ksp("androidx.room:room-compiler:$roomVersion")
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.8.1")
+
 
     implementation("androidx.compose.material:material-icons-extended")
 
@@ -96,6 +102,11 @@ dependencies {
 
     //location
     implementation("com.google.android.gms:play-services-location:21.0.1")
+
+    implementation("com.google.android.gms:play-services-auth:21.2.0")
+    implementation("com.google.firebase:firebase-auth-ktx")
+
+
 
 
 
