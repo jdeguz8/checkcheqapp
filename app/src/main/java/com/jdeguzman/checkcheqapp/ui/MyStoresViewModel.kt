@@ -35,8 +35,10 @@ class MyStoresViewModel @Inject constructor(
     data class DialogUi(
         val showAddDialog: Boolean = false,
         val lat: Double? = null,
-        val lng: Double? = null
+        val lng: Double? = null,
+        val suggestedStoreName: String? = null
     )
+
 
     private val _dialogUi = MutableStateFlow(DialogUi())
     val dialogUi: StateFlow<DialogUi> = _dialogUi.asStateFlow()
@@ -54,7 +56,21 @@ class MyStoresViewModel @Inject constructor(
         _dialogUi.value = DialogUi(
             showAddDialog = true,
             lat = lat,
-            lng = lng
+            lng = lng,
+            suggestedStoreName = null
+        )
+    }
+
+    fun onPlaceSelected(
+        lat: Double,
+        lng: Double,
+        storeName: String?
+    ) {
+        _dialogUi.value = DialogUi(
+            showAddDialog = true,
+            lat = lat,
+            lng = lng,
+            suggestedStoreName = storeName
         )
     }
 

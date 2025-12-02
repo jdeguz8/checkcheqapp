@@ -1,7 +1,7 @@
 <resources>
     <string name="app_name">ca.checkcheq.app</string>
     <string name="google_maps_key" translatable="false">
-        YOUR_REAL_API_KEY_HERE
+        AIzaSyDMxpzpzhqIA1NRIvCS2CB_wOMt3ZBsizM
     </string>
 
     <!-- Paste the client_id from google-services.json here -->

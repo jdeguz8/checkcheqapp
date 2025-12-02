@@ -3,13 +3,17 @@ package com.jdeguzman.checkcheqapp.ui
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.pm.PackageManager
+import android.location.Location
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -21,18 +25,27 @@ import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.google.android.gms.location.LocationServices
+import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
+import com.google.android.libraries.places.api.Places
+import com.google.android.libraries.places.api.model.AutocompletePrediction
+import com.google.android.libraries.places.api.model.AutocompleteSessionToken
+import com.google.android.libraries.places.api.model.Place
+import com.google.android.libraries.places.api.model.RectangularBounds
+import com.google.android.libraries.places.api.model.TypeFilter
+import com.google.android.libraries.places.api.net.FetchPlaceRequest
+import com.google.android.libraries.places.api.net.FindAutocompletePredictionsRequest
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.MapProperties
 import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
-import android.location.Location
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
-@SuppressLint("MissingPermission") // we gate location features behind permission checks
+@SuppressLint("MissingPermission") // we guard all location calls with permission checks
 @Composable
 fun MyStoresScreen(
     onBack: () -> Unit,
@@ -42,8 +55,10 @@ fun MyStoresScreen(
     val dialogUi by viewModel.dialogUi.collectAsState()
 
     val context = LocalContext.current
-    val fineLocationPermission = Manifest.permission.ACCESS_FINE_LOCATION
+    val scope = rememberCoroutineScope()
 
+    // --- Location permission state ---
+    val fineLocationPermission = Manifest.permission.ACCESS_FINE_LOCATION
     var hasLocationPermission by remember {
         mutableStateOf(
             ContextCompat.checkSelfPermission(
@@ -59,7 +74,6 @@ fun MyStoresScreen(
         hasLocationPermission = granted
     }
 
-    // Ask for permission on first composition
     LaunchedEffect(Unit) {
         if (!hasLocationPermission) {
             permissionLauncher.launch(fineLocationPermission)
@@ -78,7 +92,6 @@ fun MyStoresScreen(
         LocationServices.getFusedLocationProviderClient(context)
     }
 
-    // When permission is granted, try to get last known location
     LaunchedEffect(hasLocationPermission) {
         if (hasLocationPermission) {
             try {
@@ -91,17 +104,120 @@ fun MyStoresScreen(
                     }
                 }
             } catch (_: SecurityException) {
-                // permission revoked mid-way, ignore
+                // ignore
             }
         }
     }
 
-    // --- Near-me filter state for map ---
+    // --- REAL Google Places search ---
+    // Make sure you've called Places.initialize(...) in Application or MainActivity
+    val placesClient = remember {
+        if (Places.isInitialized()) Places.createClient(context) else null
+    }
+
+    var searchQuery by remember { mutableStateOf("") }
+    var searchResults by remember { mutableStateOf<List<AutocompletePrediction>>(emptyList()) }
+    var searchError by remember { mutableStateOf<String?>(null) }
+    var searchLoading by remember { mutableStateOf(false) }
+
+    var sessionToken by remember { mutableStateOf(AutocompleteSessionToken.newInstance()) }
+
+    fun runPlaceSearch(query: String) {
+        val client = placesClient ?: return
+        if (query.isBlank()) {
+            searchResults = emptyList()
+            return
+        }
+
+        searchLoading = true
+        searchError = null
+
+        val builder = FindAutocompletePredictionsRequest.builder()
+            .setQuery(query)
+            .setSessionToken(sessionToken)
+            .setTypeFilter(TypeFilter.ESTABLISHMENT) // stores, restaurants, etc.
+
+        // Bias results around current location if we have it
+        val origin = myLocation
+        if (origin != null) {
+            val delta = 0.25  // ~25km box
+            val southWest = LatLng(origin.latitude - delta, origin.longitude - delta)
+            val northEast = LatLng(origin.latitude + delta, origin.longitude + delta)
+            builder.setLocationBias(RectangularBounds.newInstance(southWest, northEast))
+        }
+
+        // Optional: restrict to Canada
+        builder.setCountries("CA")
+
+        val request = builder.build()
+
+        client.findAutocompletePredictions(request)
+            .addOnSuccessListener { response ->
+                searchLoading = false
+                searchResults = response.autocompletePredictions
+            }
+            .addOnFailureListener { e ->
+                searchLoading = false
+                searchError = e.localizedMessage ?: "Search failed"
+                searchResults = emptyList()
+            }
+    }
+
+    // When user taps a prediction
+    val onPredictionClicked: (AutocompletePrediction) -> Unit = onPredictionClicked@{ prediction ->
+        val client = placesClient ?: return@onPredictionClicked
+
+        searchQuery = prediction.getFullText(null).toString()
+        searchResults = emptyList()
+        searchError = null
+        searchLoading = true
+
+        val placeId = prediction.placeId
+        val placeFields = listOf(
+            Place.Field.ID,
+            Place.Field.NAME,
+            Place.Field.LAT_LNG,
+            Place.Field.ADDRESS
+        )
+
+        val request = FetchPlaceRequest.builder(placeId, placeFields)
+            .setSessionToken(sessionToken)
+            .build()
+
+        client.fetchPlace(request)
+            .addOnSuccessListener { response ->
+                searchLoading = false
+                val place = response.place
+                val latLng = place.latLng
+
+                if (latLng != null) {
+                    scope.launch {
+                        cameraPositionState.animate(
+                            update = CameraUpdateFactory.newLatLngZoom(latLng, 15f)
+                        )
+                    }
+
+                    // 👉 Open Add Price dialog with store name prefilled
+                    viewModel.onPlaceSelected(
+                        lat = latLng.latitude,
+                        lng = latLng.longitude,
+                        storeName = place.name
+                    )
+                }
+            }
+
+            .addOnFailureListener { e ->
+                searchLoading = false
+                searchError = e.localizedMessage ?: "Failed to load place details"
+            }
+    }
+
+
+    // --- Near-me filter state for map pins ---
     var nearMeOnly by remember { mutableStateOf(false) }
 
     val visiblePins = remember(pins, myLocation, nearMeOnly) {
-        val origin = myLocation  // local snapshot
-
+        val origin = myLocation
         if (!nearMeOnly || origin == null) {
             pins
         } else {
@@ -112,11 +228,10 @@ fun MyStoresScreen(
                     postLat = post.lat,
                     postLng = post.lng
                 )
-                dist != null && dist <= 1000f   // ≤ 1km
+                dist != null && dist <= 1000f // ≤ 1 km
             }
         }
     }
-
 
     Scaffold(
         topBar = {
@@ -138,6 +253,7 @@ fun MyStoresScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
+            // --- Map ---
             GoogleMap(
                 modifier = Modifier.fillMaxSize(),
                 cameraPositionState = cameraPositionState,
@@ -164,12 +280,138 @@ fun MyStoresScreen(
                 }
             }
 
-            // Near-me toggle overlay (if we have location)
+            // --- Search UI overlay (opaque, elevated) ---
+            Column(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 16.dp)
+            ) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.large,
+                    color = MaterialTheme.colorScheme.surface,
+                    shadowElevation = 8.dp,
+                    tonalElevation = 4.dp
+                ) {
+                    Column(
+                        modifier = Modifier.padding(
+                            horizontal = 12.dp,
+                            vertical = 8.dp
+                        )
+                    ) {
+                        OutlinedTextField(
+                            value = searchQuery,
+                            onValueChange = { value ->
+                                searchQuery = value
+                                searchError = null
+                                if (value.length >= 2) {
+                                    runPlaceSearch(value)
+                                } else {
+                                    searchResults = emptyList()
+                                }
+                            },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            label = { Text("Search places (e.g. Walmart)") },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Default.Search,
+                                    contentDescription = null
+                                )
+                            },
+                            trailingIcon = {
+                                when {
+                                    searchLoading -> {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(18.dp),
+                                            strokeWidth = 2.dp
+                                        )
+                                    }
+
+                                    searchQuery.isNotBlank() -> {
+                                        IconButton(onClick = {
+                                            searchQuery = ""
+                                            searchResults = emptyList()
+                                            searchError = null
+                                            sessionToken =
+                                                AutocompleteSessionToken.newInstance()
+                                        }) {
+                                            Icon(
+                                                imageVector = Icons.Default.Clear,
+                                                contentDescription = "Clear"
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        )
+
+                        if (searchLoading) {
+                            Text(
+                                text = "Searching…",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(top = 4.dp)
+                            )
+                        }
+
+                        if (searchError != null) {
+                            Text(
+                                text = searchError!!,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.padding(top = 4.dp)
+                            )
+                        }
+                    }
+                }
+
+                if (searchResults.isNotEmpty()) {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                    ) {
+                        Column {
+                            searchResults.forEach { prediction ->
+                                val primary = prediction.getPrimaryText(null).toString()
+                                val secondary =
+                                    prediction.getSecondaryText(null).toString()
+
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { onPredictionClicked(prediction) }
+                                        .padding(12.dp)
+                                ) {
+                                    Column {
+                                        Text(
+                                            text = primary,
+                                            style = MaterialTheme.typography.bodyLarge
+                                        )
+                                        if (secondary.isNotBlank()) {
+                                            Text(
+                                                text = secondary,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Near-me toggle overlay (pushed down below search)
             if (hasLocationPermission && myLocation != null) {
                 Card(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
-                        .padding(16.dp),
+                        .padding(top = 96.dp, end = 16.dp),
                     elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
                 ) {
                     Row(
@@ -190,8 +432,10 @@ fun MyStoresScreen(
                 }
             }
 
+            // Add-price dialog
             if (dialogUi.showAddDialog) {
                 AddPriceDialog(
+                    initialStoreName = dialogUi.suggestedStoreName,
                     onConfirm = { storeName, itemName, priceText, photoUri, category ->
                         val price = priceText.toDoubleOrNull() ?: 0.0
                         viewModel.onAddPin(storeName, itemName, price, photoUri, category)
@@ -199,15 +443,13 @@ fun MyStoresScreen(
                     onDismiss = { viewModel.onDismissDialog() }
                 )
             }
+
         }
     }
 }
 
 /**
- * Small helper for distance in meters.
- */
-/**
- * Small helper for distance in meters.
+ * Distance helper for the map-near-me filter.
  */
 private fun computeDistanceMeters(
     userLat: Double,
@@ -226,27 +468,27 @@ private fun computeDistanceMeters(
     return results[0]
 }
 
-
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddPriceDialog(
+    initialStoreName: String? = null,
     onConfirm: (
         storeName: String,
         itemName: String,
         priceText: String,
         photoUri: String?,
-        category: String?           // 👈 NEW
+        category: String?
     ) -> Unit,
     onDismiss: () -> Unit
-) {
-    var storeName by remember { mutableStateOf("") }
+)
+ {
+     var storeName by remember { mutableStateOf(initialStoreName.orEmpty()) }
     var itemName by remember { mutableStateOf("") }
     var priceText by remember { mutableStateOf("") }
     var pickedPhotoUri by remember { mutableStateOf<Uri?>(null) }
 
-    // category selection
-    val categoryOptions = listOf("Grocery", "Restaurant", "Cafe", "Bakery", "Fast food", "Other")
+    val categoryOptions =
+        listOf("Grocery", "Restaurant", "Cafe", "Bakery", "Fast food", "Other")
     var categoryExpanded by remember { mutableStateOf(false) }
     var selectedCategory by remember { mutableStateOf<String?>(null) }
 
@@ -293,7 +535,7 @@ fun AddPriceDialog(
                 ) {
                     OutlinedTextField(
                         value = selectedCategory ?: "",
-                        onValueChange = { },
+                        onValueChange = {},
                         readOnly = true,
                         label = { Text("Category") },
                         placeholder = { Text("Grocery, Restaurant…") },

@@ -96,8 +96,11 @@ fun FeedScreen(
         var base = posts.sortedByDescending { it.createdAt }
 
         if (selectedCategory != "All") {
-            base = base.filter { it.category == selectedCategory }
+            base = base.filter { post ->
+                post.category?.equals(selectedCategory, ignoreCase = true) == true
+            }
         }
+
 
         if (nearMeOnly && userLocation != null) {
             base = base.filter { post ->

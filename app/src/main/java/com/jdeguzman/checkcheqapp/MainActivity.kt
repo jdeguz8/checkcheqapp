@@ -32,27 +32,29 @@ import com.jdeguzman.checkcheqapp.ui.MyStoresViewModel
 import com.jdeguzman.checkcheqapp.ui.PricePostDetailsScreen
 import com.jdeguzman.checkcheqapp.ui.SettingsScreen
 import dagger.hilt.android.AndroidEntryPoint
+import com.google.android.libraries.places.api.Places
+
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent {
-            val authViewModel: AuthViewModel = hiltViewModel()
-            val authState by authViewModel.uiState.collectAsState()
 
-            Surface(color = MaterialTheme.colorScheme.background) {
-                if (authState.isSignedIn) {
-                    // Main app when signed in
-                    CheckCheqAppRoot()
-                } else {
-                    // Google sign-in screen
-                    AuthScreen(authViewModel = authViewModel)
-                }
-            }
+        // ✅ Initialize Places SDK once
+        if (!Places.isInitialized()) {
+            Places.initialize(
+                applicationContext,
+                getString(R.string.google_maps_key)   // same key you use for Maps
+            )
+        }
+
+        setContent {
+            CheckCheqAppRoot()
         }
     }
 }
+
 
 @Composable
 fun CheckCheqAppRoot() {

@@ -107,10 +107,10 @@ dependencies {
     implementation("com.google.firebase:firebase-auth-ktx")
 
 
+    //Places
+    implementation("com.google.android.libraries.places:places:3.5.0")
 
-
-
-
+    
 }
 
 room {

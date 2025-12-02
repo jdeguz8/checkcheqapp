@@ -37,11 +37,13 @@ class FirebasePricePostDataSource @Inject constructor(
             "lat" to post.lat,
             "lng" to post.lng,
             "photoUrl" to remotePhotoUrl,
-            "createdAt" to post.createdAt
+            "createdAt" to post.createdAt,
+            "category" to post.category,
+            "postedBy" to post.postedBy
         )
 
-        // Let Firestore auto-generate ID
         val docRef = postsCollection.add(docData).await()
         return docRef.id
     }
+
 }
