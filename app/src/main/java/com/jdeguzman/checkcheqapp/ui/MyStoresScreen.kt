@@ -49,10 +49,12 @@ import kotlinx.coroutines.launch
 @Composable
 fun MyStoresScreen(
     onBack: () -> Unit,
-    viewModel: MyStoresViewModel = hiltViewModel()
+    viewModel: MyStoresViewModel = hiltViewModel(),
+    settingsViewModel: SettingsViewModel = hiltViewModel()
 ) {
     val pins by viewModel.pins.collectAsState()
     val dialogUi by viewModel.dialogUi.collectAsState()
+    val settingsState by settingsViewModel.uiState.collectAsState()
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -110,7 +112,6 @@ fun MyStoresScreen(
     }
 
     // --- REAL Google Places search ---
-    // Make sure you've called Places.initialize(...) in Application or MainActivity
     val placesClient = remember {
         if (Places.isInitialized()) Places.createClient(context) else null
     }
@@ -164,63 +165,70 @@ fun MyStoresScreen(
     }
 
     // When user taps a prediction
-    val onPredictionClicked: (AutocompletePrediction) -> Unit = onPredictionClicked@{ prediction ->
-        val client = placesClient ?: return@onPredictionClicked
+    val onPredictionClicked: (AutocompletePrediction) -> Unit =
+        onPredictionClicked@{ prediction ->
+            val client = placesClient ?: return@onPredictionClicked
 
-        searchQuery = prediction.getFullText(null).toString()
-        searchResults = emptyList()
-        searchError = null
-        searchLoading = true
+            searchQuery = prediction.getFullText(null).toString()
+            searchResults = emptyList()
+            searchError = null
+            searchLoading = true
 
-        val placeId = prediction.placeId
-        val placeFields = listOf(
-            Place.Field.ID,
-            Place.Field.NAME,
-            Place.Field.LAT_LNG,
-            Place.Field.ADDRESS
-        )
+            val placeId = prediction.placeId
+            val placeFields = listOf(
+                Place.Field.ID,
+                Place.Field.NAME,
+                Place.Field.LAT_LNG,
+                Place.Field.ADDRESS
+            )
 
-        val request = FetchPlaceRequest.builder(placeId, placeFields)
-            .setSessionToken(sessionToken)
-            .build()
+            val request = FetchPlaceRequest.builder(placeId, placeFields)
+                .setSessionToken(sessionToken)
+                .build()
 
-        client.fetchPlace(request)
-            .addOnSuccessListener { response ->
-                searchLoading = false
-                val place = response.place
-                val latLng = place.latLng
+            client.fetchPlace(request)
+                .addOnSuccessListener { response ->
+                    searchLoading = false
+                    val place = response.place
+                    val latLng = place.latLng
 
-                if (latLng != null) {
-                    scope.launch {
-                        cameraPositionState.animate(
-                            update = CameraUpdateFactory.newLatLngZoom(latLng, 15f)
+                    if (latLng != null) {
+                        scope.launch {
+                            cameraPositionState.animate(
+                                update = CameraUpdateFactory.newLatLngZoom(latLng, 15f)
+                            )
+                        }
+
+                        // 👉 Open Add Price dialog with store name prefilled
+                        viewModel.onPlaceSelected(
+                            lat = latLng.latitude,
+                            lng = latLng.longitude,
+                            storeName = place.name
                         )
                     }
-
-                    // 👉 Open Add Price dialog with store name prefilled
-                    viewModel.onPlaceSelected(
-                        lat = latLng.latitude,
-                        lng = latLng.longitude,
-                        storeName = place.name
-                    )
                 }
-            }
-
-            .addOnFailureListener { e ->
-                searchLoading = false
-                searchError = e.localizedMessage ?: "Failed to load place details"
-            }
-    }
-
+                .addOnFailureListener { e ->
+                    searchLoading = false
+                    searchError = e.localizedMessage ?: "Failed to load place details"
+                }
+        }
 
     // --- Near-me filter state for map pins ---
-    var nearMeOnly by remember { mutableStateOf(false) }
+    var nearMeOnly by remember(settingsState.startWithNearMe) {
+        mutableStateOf(settingsState.startWithNearMe)
+    }
 
-    val visiblePins = remember(pins, myLocation, nearMeOnly) {
+    val visiblePins = remember(
+        pins,
+        myLocation,
+        nearMeOnly,
+        settingsState.nearMeRadiusMeters
+    ) {
         val origin = myLocation
         if (!nearMeOnly || origin == null) {
             pins
         } else {
+            val radiusMeters = settingsState.nearMeRadiusMeters.toFloat()
             pins.filter { post ->
                 val dist = computeDistanceMeters(
                     userLat = origin.latitude,
@@ -228,7 +236,7 @@ fun MyStoresScreen(
                     postLat = post.lat,
                     postLng = post.lng
                 )
-                dist != null && dist <= 1000f // ≤ 1 km
+                dist != null && dist <= radiusMeters
             }
         }
     }
@@ -419,8 +427,14 @@ fun MyStoresScreen(
                             .padding(horizontal = 12.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
+                        val radiusLabel = if (settingsState.nearMeRadiusMeters < 1000) {
+                            "${settingsState.nearMeRadiusMeters} m"
+                        } else {
+                            "${settingsState.nearMeRadiusMeters / 1000} km"
+                        }
+
                         Text(
-                            text = "Near me (≤ 1 km)",
+                            text = "Near me (≤ $radiusLabel)",
                             style = MaterialTheme.typography.bodyMedium
                         )
                         Spacer(Modifier.width(8.dp))
@@ -443,7 +457,6 @@ fun MyStoresScreen(
                     onDismiss = { viewModel.onDismissDialog() }
                 )
             }
-
         }
     }
 }
@@ -480,9 +493,8 @@ fun AddPriceDialog(
         category: String?
     ) -> Unit,
     onDismiss: () -> Unit
-)
- {
-     var storeName by remember { mutableStateOf(initialStoreName.orEmpty()) }
+) {
+    var storeName by remember { mutableStateOf(initialStoreName.orEmpty()) }
     var itemName by remember { mutableStateOf("") }
     var priceText by remember { mutableStateOf("") }
     var pickedPhotoUri by remember { mutableStateOf<Uri?>(null) }

@@ -13,7 +13,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -24,6 +23,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.google.android.libraries.places.api.Places
 import com.jdeguzman.checkcheqapp.ui.AuthScreen
 import com.jdeguzman.checkcheqapp.ui.AuthViewModel
 import com.jdeguzman.checkcheqapp.ui.FeedScreen
@@ -31,9 +31,9 @@ import com.jdeguzman.checkcheqapp.ui.MyStoresScreen
 import com.jdeguzman.checkcheqapp.ui.MyStoresViewModel
 import com.jdeguzman.checkcheqapp.ui.PricePostDetailsScreen
 import com.jdeguzman.checkcheqapp.ui.SettingsScreen
+import com.jdeguzman.checkcheqapp.ui.SettingsViewModel
+import com.jdeguzman.checkcheqapp.ui.theme.CheckCheqTheme
 import dagger.hilt.android.AndroidEntryPoint
-import com.google.android.libraries.places.api.Places
-
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -50,20 +50,39 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            CheckCheqAppRoot()
+            CheckCheqTheme {
+                CheckCheqAppRoot()
+            }
         }
     }
 }
 
-
 @Composable
 fun CheckCheqAppRoot() {
+    // One AuthViewModel for the whole activity
+    val authViewModel: AuthViewModel = hiltViewModel()
+    val authState by authViewModel.uiState.collectAsState()
+
+    if (!authState.isSignedIn) {
+        // 🔐 Not signed in → show auth screen
+        AuthScreen(authViewModel = authViewModel)
+    } else {
+        // ✅ Signed in → show main app with bottom nav
+        MainAppScaffold(authViewModel = authViewModel)
+    }
+}
+
+@Composable
+private fun MainAppScaffold(
+    authViewModel: AuthViewModel
+) {
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route ?: "feed"
 
     // Shared VM for map + feed
     val myStoresViewModel: MyStoresViewModel = hiltViewModel()
+    val settingsViewModel: SettingsViewModel = hiltViewModel()
 
     Scaffold(
         bottomBar = {
@@ -134,10 +153,14 @@ fun CheckCheqAppRoot() {
                 )
             }
             composable("settings") {
-                SettingsScreen()
+                SettingsScreen(
+                    settingsViewModel = settingsViewModel,
+                    authViewModel = authViewModel
+                )
             }
             composable("details/{postId}") { backStackEntry ->
-                val postId = backStackEntry.arguments?.getString("postId")?.toLongOrNull() ?: -1L
+                val postId =
+                    backStackEntry.arguments?.getString("postId")?.toLongOrNull() ?: -1L
                 PricePostDetailsScreen(
                     postId = postId,
                     viewModel = myStoresViewModel,

@@ -27,7 +27,9 @@ android {
     }
     kotlin { jvmToolchain(17) }
 
-    buildFeatures { compose = true }
+    buildFeatures {
+        compose = true
+        buildConfig = true}
 
     // (Optional but nice for Room migration tests)
     sourceSets["test"].assets.srcDir("$projectDir/schemas")
@@ -110,7 +112,7 @@ dependencies {
     //Places
     implementation("com.google.android.libraries.places:places:3.5.0")
 
-    
+
 }
 
 room {

@@ -38,12 +38,16 @@ import java.util.Date
 @Composable
 fun FeedScreen(
     viewModel: MyStoresViewModel = hiltViewModel(),
+    settingsViewModel: SettingsViewModel = hiltViewModel(),
     onOpenMap: () -> Unit = {},
     onOpenPostDetails: (Long) -> Unit = {}
-) {
+)
+ {
     val posts by viewModel.pins.collectAsState()
+     val settingsState by settingsViewModel.uiState.collectAsState()
 
-    var selectedPost by remember { mutableStateOf<PricePost?>(null) }
+
+     var selectedPost by remember { mutableStateOf<PricePost?>(null) }
 
     // --- user location state ---
     val context = LocalContext.current
@@ -78,7 +82,11 @@ fun FeedScreen(
     }
 
     // --- filters ---
-    var nearMeOnly by remember { mutableStateOf(false) }
+     var nearMeOnly by remember(settingsState.startWithNearMe) {
+         mutableStateOf(settingsState.startWithNearMe)
+     }
+
+
 
     // Static list of categories for now
     val categoryOptions = listOf(
@@ -90,29 +98,37 @@ fun FeedScreen(
         "Fast food",
         "Other"
     )
-    var selectedCategory by remember { mutableStateOf("All") }
+     var selectedCategory by remember(settingsState.defaultCategory) {
+         mutableStateOf(settingsState.defaultCategory)
+     }
+     val filteredPosts = remember(
+         posts,
+         userLocation,
+         nearMeOnly,
+         selectedCategory,
+         settingsState.nearMeRadiusMeters
+     ) {
+         var base = posts.sortedByDescending { it.createdAt }
 
-    val filteredPosts = remember(posts, userLocation, nearMeOnly, selectedCategory) {
-        var base = posts.sortedByDescending { it.createdAt }
+         if (selectedCategory != "All") {
+             base = base.filter { post ->
+                 post.category?.equals(selectedCategory, ignoreCase = true) == true
+             }
+         }
 
-        if (selectedCategory != "All") {
-            base = base.filter { post ->
-                post.category?.equals(selectedCategory, ignoreCase = true) == true
-            }
-        }
+         if (nearMeOnly && userLocation != null) {
+             val radiusMeters = settingsState.nearMeRadiusMeters.toFloat()
+             base = base.filter { post ->
+                 val dist = computeDistanceMetersForFeed(userLocation, post)
+                 dist != null && dist <= radiusMeters
+             }
+         }
+
+         base
+     }
 
 
-        if (nearMeOnly && userLocation != null) {
-            base = base.filter { post ->
-                val dist = computeDistanceMetersForFeed(userLocation, post)
-                dist != null && dist <= 1000f
-            }
-        }
-
-        base
-    }
-
-    Column(
+     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp)
@@ -146,26 +162,19 @@ fun FeedScreen(
         Spacer(Modifier.height(8.dp))
 
         // Near-me toggle (only meaningful if we have location)
-        if (userLocation != null) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = "Only show posts near me (≤ 1 km)",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                androidx.compose.material3.Switch(
-                    checked = nearMeOnly,
-                    onCheckedChange = { nearMeOnly = it }
-                )
-            }
-        }
+         val radiusLabel = if (settingsState.nearMeRadiusMeters < 1000) {
+             "${settingsState.nearMeRadiusMeters} m"
+         } else {
+             "${settingsState.nearMeRadiusMeters / 1000} km"
+         }
 
-        Spacer(Modifier.height(4.dp))
+         Text(
+             text = "Only show posts near me (≤ $radiusLabel)",
+             style = MaterialTheme.typography.bodyMedium
+         )
+
+
+         Spacer(Modifier.height(4.dp))
 
         Divider()
 
