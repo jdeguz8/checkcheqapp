@@ -2,6 +2,8 @@ package com.jdeguzman.checkcheqapp.ui
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -12,6 +14,17 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.jdeguzman.checkcheqapp.R
 
+/**
+ * Settings screen for CheckCheq.
+ *
+ * Sections:
+ * - Account: shows signed-in user and allows sign out
+ * - Distance & Feed defaults: near-me radius, default near-me toggle, default category
+ * - About: short description of the app’s purpose
+ *
+ * Reads and updates preferences via [SettingsViewModel] and coordinates sign out
+ * with both Settings and Auth view models.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
@@ -25,9 +38,12 @@ fun SettingsScreen(
         "All", "Grocery", "Restaurant", "Cafe", "Bakery", "Fast food", "Other"
     )
 
+    val scrollState = rememberScrollState()
+
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(scrollState)   //
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
@@ -196,7 +212,7 @@ fun SettingsScreen(
             }
         }
 
-        // 🔹 About card (leave as you have it, or keep this)
+        // 🔹 About card
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
@@ -214,7 +230,6 @@ fun SettingsScreen(
                             "Long-press on the map or search a place to add posts and help others discover deals nearby.",
                     style = MaterialTheme.typography.bodyMedium
                 )
-                // If BuildConfig is being annoying, you can hardcode the version here for now.
             }
         }
     }

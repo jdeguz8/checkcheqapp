@@ -44,6 +44,16 @@ import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
 import kotlinx.coroutines.launch
 
+/**
+ * Map screen showing nearby price posts and allowing new posts to be added.
+ *
+ * Features:
+ * - Google Maps Compose map with my-location and zoom controls
+ * - Long-press to start adding a post at a coordinate
+ * - Google Places autocomplete search with camera animation
+ * - Near-me toggle to filter visible pins within a radius
+ * - Shows an Add Price dialog driven by [MyStoresViewModel]
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @SuppressLint("MissingPermission") // we guard all location calls with permission checks
 @Composable
@@ -462,7 +472,9 @@ fun MyStoresScreen(
 }
 
 /**
- * Distance helper for the map-near-me filter.
+ * Compute the distance in meters between the user’s location and a post.
+ *
+ * @return the distance in meters, or null if it could not be computed.
  */
 private fun computeDistanceMeters(
     userLat: Double,
@@ -481,6 +493,18 @@ private fun computeDistanceMeters(
     return results[0]
 }
 
+/**
+ * Dialog for entering price post details.
+ *
+ * Lets the user specify:
+ * - store or restaurant name
+ * - item or dish name
+ * - price
+ * - category (from a predefined dropdown)
+ * - optional photo from the gallery
+ *
+ * On confirmation, passes the raw text values back to the caller.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddPriceDialog(

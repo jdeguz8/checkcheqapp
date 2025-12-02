@@ -20,7 +20,14 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
-
+/**
+ * Hilt module that provides app-wide singletons and DAOs.
+ *
+ * Wires up:
+ * - Room database and its DAOs
+ * - PricePostRepository (Room implementation)
+ * - Firebase Firestore and Storage instances
+ */
 @Module
 @InstallIn(SingletonComponent::class)
 object AppModule {

@@ -38,6 +38,14 @@ import java.nio.charset.StandardCharsets
 import java.text.DateFormat
 import java.util.Date
 
+/**
+ * Detail screen for a single [PricePost].
+ *
+ * Shows a large hero image (if present), store and item name, a prominent
+ * price chip, category, creation time, and distance. Also includes a
+ * "Location" section and an "Open in Maps" button that launches Google Maps
+ * with a geo: URI for the post coordinates.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PricePostDetailsScreen(
@@ -313,7 +321,9 @@ fun PricePostDetailsScreen(
 }
 
 /**
- * Details-screen version of the distance helper.
+ * Compute a human-readable distance string for the details screen.
+ *
+ * Uses the user's last known location and the post's coordinates.
  */
 private fun detailsDistanceText(
     userLocation: Location?,

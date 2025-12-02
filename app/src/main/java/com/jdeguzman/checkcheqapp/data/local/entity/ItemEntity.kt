@@ -6,8 +6,9 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 
 /**
- * Basic item row saved in Room.
- * - Unique index on name so REPLACE upserts by name work.
+ * Room entity for a saved item in the master item list.
+ *
+ * Uses a unique index on name so we can safely upsert by name.
  */
 @Entity(
     tableName = "items",

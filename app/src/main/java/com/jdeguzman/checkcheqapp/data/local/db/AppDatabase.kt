@@ -10,6 +10,17 @@ import com.jdeguzman.checkcheqapp.data.local.entity.BasketItemEntity
 import com.jdeguzman.checkcheqapp.data.local.entity.ItemEntity
 import com.jdeguzman.checkcheqapp.data.local.entity.PricePostEntity
 
+/**
+ * Main Room database for CheckCheq.
+ *
+ * Stores:
+ * - master item list (ItemEntity)
+ * - quick basket rows (BasketItemEntity)
+ * - locally cached price posts (PricePostEntity)
+ *
+ * Exposes DAOs for each table.
+ */
+
 @Database(
     entities = [
         ItemEntity::class,

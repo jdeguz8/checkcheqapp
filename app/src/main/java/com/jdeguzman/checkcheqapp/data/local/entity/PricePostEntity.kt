@@ -4,7 +4,9 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 
 /**
- * Room representation of a price post.
+ * Room entity representing a price post row in the local database.
+ *
+ * Mirrors the Firestore document fields so we can cache posts offline.
  */
 @Entity(tableName = "price_posts")
 data class PricePostEntity(

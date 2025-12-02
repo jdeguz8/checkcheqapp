@@ -23,6 +23,12 @@ import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
 import com.jdeguzman.checkcheqapp.R
 
+/**
+ * Authentication screen for CheckCheq.
+ *
+ * Shows a Google Sign-In button, ties into [AuthViewModel],
+ * and displays loading and error states during login.
+ */
 @Composable
 fun AuthScreen(
     authViewModel: AuthViewModel

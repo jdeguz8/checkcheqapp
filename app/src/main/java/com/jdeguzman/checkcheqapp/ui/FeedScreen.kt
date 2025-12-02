@@ -7,15 +7,20 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Divider
+import androidx.compose.material3.DividerDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
@@ -35,6 +40,13 @@ import com.jdeguzman.checkcheqapp.domain.PricePost
 import java.text.DateFormat
 import java.util.Date
 
+/**
+ * Main feed screen showing a list of price posts.
+ *
+ * Uses posts from [MyStoresViewModel], applies category and near-me filters
+ * based on user preferences from [SettingsViewModel], and displays cards
+ * with store, item, price, category, poster, and distance.
+ */
 @Composable
 fun FeedScreen(
     viewModel: MyStoresViewModel = hiltViewModel(),
@@ -162,23 +174,36 @@ fun FeedScreen(
         Spacer(Modifier.height(8.dp))
 
         // Near-me toggle (only meaningful if we have location)
-         val radiusLabel = if (settingsState.nearMeRadiusMeters < 1000) {
-             "${settingsState.nearMeRadiusMeters} m"
-         } else {
-             "${settingsState.nearMeRadiusMeters / 1000} km"
+         // Near-me toggle (only meaningful if we have location)
+         if (userLocation != null) {
+             val radiusLabel = if (settingsState.nearMeRadiusMeters < 1000) {
+                 "${settingsState.nearMeRadiusMeters} m"
+                 "${settingsState.nearMeRadiusMeters} m"
+             } else {
+                 "${settingsState.nearMeRadiusMeters / 1000} km"
+             }
+
+             Row(
+                 modifier = Modifier
+                     .fillMaxWidth()
+                     .padding(bottom = 8.dp),
+                 verticalAlignment = Alignment.CenterVertically,
+                 horizontalArrangement = Arrangement.SpaceBetween
+             ) {
+                 Text(
+                     text = "Only show posts near me (≤ $radiusLabel)",
+                     style = MaterialTheme.typography.bodyMedium
+                 )
+                 Switch(
+                     checked = nearMeOnly,
+                     onCheckedChange = { nearMeOnly = it }
+                 )
+             }
          }
-
-         Text(
-             text = "Only show posts near me (≤ $radiusLabel)",
-             style = MaterialTheme.typography.bodyMedium
-         )
-
 
          Spacer(Modifier.height(4.dp))
 
-        Divider()
-
-        Spacer(Modifier.height(8.dp))
+         HorizontalDivider(Modifier, DividerDefaults.Thickness, DividerDefaults.color)
 
         if (filteredPosts.isEmpty()) {
             Text(
@@ -225,15 +250,23 @@ fun FeedScreen(
     }
 }
 
+/**
+ * Horizontal row of category filter chips.
+ *
+ * Scrollable so all categories remain accessible on smaller screens.
+ */
 @Composable
 private fun CategoryFilterRow(
     options: List<String>,
     selected: String,
     onSelectedChange: (String) -> Unit
 ) {
+    val scrollState = rememberScrollState()
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .horizontalScroll(scrollState)
             .padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
@@ -252,6 +285,17 @@ private fun CategoryFilterRow(
     }
 }
 
+
+/*** Card UI for a single price post in the feed.
+*
+* Shows:
+* - optional thumbnail image
+* - store and item names
+* - category label (if present)
+* - price pill
+* - "Posted by" info
+* - creation time and distance from the user
+*/
 @Composable
 private fun PricePostCard(
     post: PricePost,
@@ -372,8 +416,9 @@ private fun PricePostCard(
     }
 }
 
-// --- Helpers local to feed screen (no name clashes) ---
-
+/**
+ * Compute distance in meters between user and post for the feed screen.
+ */
 private fun computeDistanceMetersForFeed(
     userLocation: Location?,
     post: PricePost
@@ -390,6 +435,10 @@ private fun computeDistanceMetersForFeed(
     return results[0]
 }
 
+/**
+ * Convert distance in meters into a human-readable string
+ * like "83 m away" or "1.3 km away".
+ */
 private fun computeDistanceTextForFeed(
     userLocation: Location?,
     post: PricePost

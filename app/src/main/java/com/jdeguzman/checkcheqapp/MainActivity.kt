@@ -35,6 +35,12 @@ import com.jdeguzman.checkcheqapp.ui.SettingsViewModel
 import com.jdeguzman.checkcheqapp.ui.theme.CheckCheqTheme
 import dagger.hilt.android.AndroidEntryPoint
 
+/**
+ * Single-activity host for the Composable UI.
+ *
+ * Initializes the Places SDK and sets the root composable, which
+ * sets up navigation between Feed, Map, Settings, and Details screens.
+ */
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 

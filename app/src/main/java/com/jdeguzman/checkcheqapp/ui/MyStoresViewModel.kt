@@ -18,6 +18,15 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 
+/**
+ * ViewModel for the map and shared price posts.
+ *
+ * Responsibilities:
+ * - Track map long-press / place selection and dialog UI state
+ * - Observe Firestore `price_posts` in real time and expose them as [pins]
+ * - Build and save new posts (Room + Firestore + Storage upload)
+ * - Attach the current Firebase user as the `postedBy` metadata
+ */
 @HiltViewModel
 class MyStoresViewModel @Inject constructor(
     private val repo: PricePostRepository
@@ -29,7 +38,9 @@ class MyStoresViewModel @Inject constructor(
         FirebaseStorage.getInstance("gs://checkcheq-demo.firebasestorage.app")
     private val auth: FirebaseAuth = FirebaseAuth.getInstance()
 
-    // UI state for the "add pin" dialog
+    /**
+     * Public UI state for the Add Price dialog.
+     */
     data class DialogUi(
         val showAddDialog: Boolean = false,
         val lat: Double? = null,
@@ -48,6 +59,9 @@ class MyStoresViewModel @Inject constructor(
         observeRemotePosts()
     }
 
+    /**
+     * Observe remote posts from Firestore and update [pins].
+     */
     private fun observeRemotePosts() {
         firestore.collection("price_posts")
             .orderBy("createdAt", Query.Direction.DESCENDING)
@@ -93,6 +107,11 @@ class MyStoresViewModel @Inject constructor(
             }
     }
 
+    /**
+     * Called when the user long-presses on the map.
+     *
+     * Stores the coordinates and shows the Add Price dialog.
+     */
     fun onMapLongClick(lat: Double, lng: Double) {
         _dialogUi.value = DialogUi(
             showAddDialog = true,
@@ -102,7 +121,12 @@ class MyStoresViewModel @Inject constructor(
         )
     }
 
-    // Called when user selects a place from the search bar
+    /**
+     * Called when the user selects a place from Places autocomplete.
+     *
+     * Stores the place coordinates and suggested store name,
+     * then shows the Add Price dialog.
+     */
     fun onPlaceSelected(lat: Double, lng: Double, storeName: String?) {
         _dialogUi.value = DialogUi(
             showAddDialog = true,
@@ -112,6 +136,9 @@ class MyStoresViewModel @Inject constructor(
         )
     }
 
+    /**
+     * Hide the Add Price dialog and clear any stored coordinates.
+     */
     fun onDismissDialog() {
         _dialogUi.value = DialogUi()
     }
@@ -191,6 +218,9 @@ class MyStoresViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Hide the Add Price dialog and clear any stored coordinates.
+     */
     fun clearAllPosts() {
         viewModelScope.launch {
             try {
@@ -201,7 +231,12 @@ class MyStoresViewModel @Inject constructor(
         }
     }
 
-    // --- helper to upload to Firebase Storage ---
+    /**
+     * Upload a photo to Firebase Storage and return its download URL.
+     *
+     * @param localUri string representation of the local content URI
+     * @return public download URL for the uploaded file, or null on failure
+     */
     private suspend fun uploadPhotoToFirebase(localUri: String?): String? {
         if (localUri.isNullOrEmpty()) return null
 

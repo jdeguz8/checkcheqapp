@@ -13,6 +13,12 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 
+/**
+ * UI state for the authentication flow.
+ *
+ * Tracks loading state, whether the user is signed in, and basic
+ * display information plus any error message from sign-in.
+ */
 data class AuthUiState(
     val isLoading: Boolean = false,
     val isSignedIn: Boolean = false,
@@ -20,6 +26,12 @@ data class AuthUiState(
     val errorMessage: String? = null
 )
 
+/**
+ * ViewModel responsible for authenticating the user with Firebase.
+ *
+ * Uses Google Sign-In ID tokens to sign in with FirebaseAuth and
+ * exposes a simple [AuthUiState] to the UI.
+ */
 @HiltViewModel
 class AuthViewModel @Inject constructor() : ViewModel() {
 
@@ -33,6 +45,11 @@ class AuthViewModel @Inject constructor() : ViewModel() {
     )
     val uiState: StateFlow<AuthUiState> = _uiState
 
+    /**
+     * Sign in to Firebase using a Google ID token.
+     *
+     * Updates [uiState] to reflect loading, success, or failure.
+     */
     fun signInWithGoogleIdToken(idToken: String) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
@@ -61,12 +78,16 @@ class AuthViewModel @Inject constructor() : ViewModel() {
             }
         }
     }
-
+    /**
+     * Sign the current user out of Firebase and reset auth UI state.
+     */
     fun signOut() {
         auth.signOut()
         _uiState.value = AuthUiState(isSignedIn = false)
     }
-
+    /**
+     * Clear any error message shown in the auth UI.
+     */
     fun clearError() {
         _uiState.update { it.copy(errorMessage = null) }
     }
