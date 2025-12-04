@@ -25,7 +25,7 @@ import javax.inject.Inject
  * - Track map long-press / place selection and dialog UI state
  * - Observe Firestore `price_posts` in real time and expose them as [pins]
  * - Build and save new posts (Room + Firestore + Storage upload)
- * - Attach the current Firebase user as the `postedBy` metadata
+ * - Attach the current Firebase user as the `postedBy` and `ownerUid` metadata
  */
 @HiltViewModel
 class MyStoresViewModel @Inject constructor(
@@ -83,6 +83,7 @@ class MyStoresViewModel @Inject constructor(
                         val createdAt = doc.getLong("createdAt") ?: 0L
                         val category = doc.getString("category")
                         val postedBy = doc.getString("postedBy")
+                        val ownerUid = doc.getString("userId")   // 🔹 map Firestore field -> ownerUid
 
                         // Use createdAt as a stable id so details screen can find it
                         PricePost(
@@ -95,7 +96,8 @@ class MyStoresViewModel @Inject constructor(
                             photoUri = photoUrl,
                             createdAt = createdAt,
                             category = category,
-                            postedBy = postedBy
+                            postedBy = postedBy,
+                            ownerUid = ownerUid
                         )
                     } catch (ex: Exception) {
                         Log.e("CheckCheq", "Failed to map Firestore doc ${doc.id}", ex)
@@ -153,11 +155,12 @@ class MyStoresViewModel @Inject constructor(
         val lat = _dialogUi.value.lat ?: return
         val lng = _dialogUi.value.lng ?: return
 
-        // --- build "postedBy" from Firebase user ---
+        // --- build "postedBy" + ownerUid from Firebase user ---
         val user = auth.currentUser
         val postedBy = user?.displayName
             ?: user?.email
             ?: "Anonymous"
+        val ownerUid = user?.uid
 
         val createdAt = System.currentTimeMillis()
 
@@ -171,7 +174,8 @@ class MyStoresViewModel @Inject constructor(
             photoUri = photoUri, // local URI (only used briefly; Firestore will have remote URL)
             createdAt = createdAt,
             category = category,
-            postedBy = postedBy
+            postedBy = postedBy,
+            ownerUid = ownerUid     // 🔹 make sure ownerUid is set
         )
 
         viewModelScope.launch {
@@ -201,7 +205,7 @@ class MyStoresViewModel @Inject constructor(
                 "createdAt" to post.createdAt,
                 "category" to post.category,
                 "postedBy" to post.postedBy,
-                "userId" to user?.uid
+                "userId" to ownerUid                 // 🔹 keep this in sync with ownerUid
             )
 
             firestore.collection("price_posts")
@@ -219,7 +223,8 @@ class MyStoresViewModel @Inject constructor(
     }
 
     /**
-     * Hide the Add Price dialog and clear any stored coordinates.
+     * Full delete of all posts from local Room cache.
+     * Firestore posts remain untouched.
      */
     fun clearAllPosts() {
         viewModelScope.launch {
@@ -227,6 +232,83 @@ class MyStoresViewModel @Inject constructor(
                 repo.clear()
             } catch (e: Exception) {
                 Log.e("CheckCheq", "Failed to clear Room posts", e)
+            }
+        }
+    }
+
+    /**
+     * Update an existing Firestore post's basic fields.
+     *
+     * - Looks up the Firestore document by [postId] (which is `createdAt`)
+     * - Updates storeName, itemName, price, and category
+     */
+    fun updatePost(
+        postId: Long,
+        storeName: String,
+        itemName: String,
+        price: Double,
+        category: String?
+    ) {
+        viewModelScope.launch {
+            try {
+                val snapshot = firestore.collection("price_posts")
+                    .whereEqualTo("createdAt", postId)
+                    .limit(1)
+                    .get()
+                    .await()
+
+                val doc = snapshot.documents.firstOrNull() ?: run {
+                    Log.w("CheckCheq", "updatePost: no document for createdAt=$postId")
+                    return@launch
+                }
+
+                val updates = mapOf(
+                    "storeName" to storeName.trim(),
+                    "itemName" to itemName.trim(),
+                    "price" to price,
+                    "category" to category
+                )
+
+                firestore.collection("price_posts")
+                    .document(doc.id)
+                    .update(updates)
+                    .await()
+
+                Log.d("CheckCheq", "Updated Firestore post for createdAt=$postId")
+            } catch (e: Exception) {
+                Log.e("CheckCheq", "Failed to update Firestore post", e)
+            }
+        }
+    }
+
+    /**
+     * Delete a post from Firestore by [postId] (which is `createdAt`).
+     *
+     * Local Room copy will remain unless you also clear it via [clearAllPosts] or add
+     * repo-level delete support.
+     */
+    fun deletePost(postId: Long) {
+        viewModelScope.launch {
+            try {
+                val snapshot = firestore.collection("price_posts")
+                    .whereEqualTo("createdAt", postId)
+                    .limit(1)
+                    .get()
+                    .await()
+
+                val doc = snapshot.documents.firstOrNull() ?: run {
+                    Log.w("CheckCheq", "deletePost: no document for createdAt=$postId")
+                    return@launch
+                }
+
+                firestore.collection("price_posts")
+                    .document(doc.id)
+                    .delete()
+                    .await()
+
+                Log.d("CheckCheq", "Deleted Firestore post for createdAt=$postId")
+            } catch (e: Exception) {
+                Log.e("CheckCheq", "Failed to delete Firestore post", e)
             }
         }
     }

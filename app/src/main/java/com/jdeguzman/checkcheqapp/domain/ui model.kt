@@ -23,5 +23,6 @@ data class PricePost(
     val photoUri: String?,       // local URI or remote URL
     val createdAt: Long,
     val category: String? = null, // Grocery / Restaurant / etc.
-    val postedBy: String? = null  // NEW: display name or email
+    val postedBy: String? = null,  // NEW: display name or email
+    val ownerUid: String? = null // Firebase UID of the creator
 )

@@ -70,4 +70,8 @@ class SettingsViewModel @Inject constructor(
             email = null
         )
     }
+    fun onSignedOut() {
+        // Optional: if you track any auth-related flags in settings state, reset them here.
+        // For now this can stay empty.
+    }
 }

@@ -19,5 +19,6 @@ data class PricePostEntity(
     val photoUri: String?,
     val createdAt: Long,
     val category: String? = null,
-    val postedBy: String? = null
+    val postedBy: String? = null,
+    val ownerUid: String? = null
 )

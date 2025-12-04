@@ -5,9 +5,15 @@ import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Snackbar
@@ -22,6 +28,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
@@ -29,36 +38,42 @@ import com.google.android.gms.common.api.ApiException
 import com.jdeguzman.checkcheqapp.R
 
 /**
- * Authentication screen for CheckCheq.
+ * High-level authentication screen for CheckCheq.
  *
- * This screen provides **two sign-in methods**:
- * - Email & password (with optional username on registration)
- * - Google Sign-In (ID token passed to Firebase Auth)
+ * This composable provides two flows:
+ * - **Login mode** (default): email/password sign-in + Google Sign-In
+ * - **Register mode**: create an account with email, password, and optional username
  *
- * The screen:
- * - Binds to [AuthViewModel] for auth state (loading, errors, user info)
- * - Shows a simple email / password / username form
- * - Exposes buttons to:
- *      - Sign in with email
- *      - Create an account with email + password + optional username
- *      - Sign in with Google
- * - Displays a snackbar for any auth error message
+ * Features:
+ * - Password field uses obscured input (●●●●●●) with a show/hide toggle.
+ * - Simple mode toggle:
+ *   - "Not a user? Create an account"
+ *   - "Already have an account? Sign in"
+ * - Displays loading spinner and error snackbar based on [authViewModel] state.
+ *
+ * @param authViewModel The view model responsible for handling authentication
+ * logic (email/password registration, login, and Google sign-in) and exposing
+ * UI state such as loading and error messages.
  */
 @Composable
 fun AuthScreen(
     authViewModel: AuthViewModel
 ) {
-    // Observe current auth state (loading, signed-in flag, displayName/email, error message)
     val state by authViewModel.uiState.collectAsState()
     val context = LocalContext.current
 
-    // Local state holders for email / password / username input fields
+    // Local form state
     val (email, setEmail) = remember { mutableStateOf("") }
     val (password, setPassword) = remember { mutableStateOf("") }
     val (username, setUsername) = remember { mutableStateOf("") }
 
-    // --- Google Sign-In configuration ---
-    // Uses the web client ID from strings.xml to request an ID token.
+    // Password visibility toggle (false = hidden / masked by default)
+    val (isPasswordVisible, setIsPasswordVisible) = remember { mutableStateOf(false) }
+
+    // Whether we are in "register" or "login" mode
+    val (isRegisterMode, setIsRegisterMode) = remember { mutableStateOf(false) }
+
+    // --- Google Sign-In config ---
     val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
         .requestIdToken(stringResource(id = R.string.default_web_client_id))
         .requestEmail()
@@ -66,7 +81,6 @@ fun AuthScreen(
 
     val googleSignInClient = GoogleSignIn.getClient(context, gso)
 
-    // Launcher to handle the Activity result for Google Sign-In
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -83,7 +97,6 @@ fun AuthScreen(
                 )
 
                 if (idToken != null) {
-                    // Pass ID token to AuthViewModel so Firebase can sign in
                     authViewModel.signInWithGoogleIdToken(idToken)
                 } else {
                     Log.e(
@@ -106,7 +119,7 @@ fun AuthScreen(
         }
     }
 
-    // --- Screen layout ---
+    // --- Layout ---
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -118,21 +131,21 @@ fun AuthScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text(
-                text = "Welcome to CheckCheq",
+                text = if (isRegisterMode) "Create your CheckCheq account" else "Welcome to CheckCheq",
                 style = MaterialTheme.typography.headlineMedium
             )
             Text(
-                text = "Sign in to save and share nearby price posts.",
+                text = if (isRegisterMode)
+                    "Sign up to start saving and sharing nearby prices."
+                else
+                    "Sign in to save and share nearby price posts.",
                 style = MaterialTheme.typography.bodyMedium
             )
 
             Spacer(Modifier.height(8.dp))
 
-            // --- Email / Password / Username section ---
+            // --- Email / Password (+ username for register mode) ---
 
-            /**
-             * Email input field.
-             */
             OutlinedTextField(
                 value = email,
                 onValueChange = setEmail,
@@ -141,35 +154,67 @@ fun AuthScreen(
                 singleLine = true
             )
 
-            /**
-             * Password input field.
-             * (In a real app, you may want to use a password visual transformation.)
-             */
             OutlinedTextField(
                 value = password,
                 onValueChange = setPassword,
                 label = { Text("Password") },
                 modifier = Modifier.fillMaxWidth(),
-                singleLine = true
+                singleLine = true,
+                visualTransformation = if (isPasswordVisible) {
+                    VisualTransformation.None
+                } else {
+                    PasswordVisualTransformation()
+                },
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Password
+                ),
+                trailingIcon = {
+                    val icon = if (isPasswordVisible) {
+                        Icons.Filled.VisibilityOff
+                    } else {
+                        Icons.Filled.Visibility
+                    }
+                    val description = if (isPasswordVisible) {
+                        "Hide password"
+                    } else {
+                        "Show password"
+                    }
+
+                    IconButton(onClick = { setIsPasswordVisible(!isPasswordVisible) }) {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = description
+                        )
+                    }
+                }
             )
 
-            /**
-             * Optional username field used when registering a new account.
-             * If filled in, it will become the Firebase user displayName.
-             */
-            OutlinedTextField(
-                value = username,
-                onValueChange = setUsername,
-                label = { Text("Username (optional)") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
-            )
+            if (isRegisterMode) {
+                OutlinedTextField(
+                    value = username,
+                    onValueChange = setUsername,
+                    label = { Text("Username (optional)") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+            }
 
-            // Row of buttons for email-based sign-in / registration
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
+            if (isRegisterMode) {
+                // Create account button
+                Button(
+                    onClick = {
+                        authViewModel.registerWithEmail(
+                            email = email.trim(),
+                            password = password.trim(),
+                            username = username.trim().ifBlank { null }
+                        )
+                    },
+                    enabled = !state.isLoading
+                ) {
+                    Text("Create account")
+                }
+            } else {
+                // Login button + Google sign-in in login mode
                 Button(
                     onClick = {
                         authViewModel.signInWithEmail(
@@ -182,50 +227,50 @@ fun AuthScreen(
                     Text("Sign in with Email")
                 }
 
-                TextButton(
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Divider(modifier = Modifier.weight(1f))
+                    Text("OR")
+                    Divider(modifier = Modifier.weight(1f))
+                }
+
+                Button(
                     onClick = {
-                        authViewModel.registerWithEmail(
-                            email = email.trim(),
-                            password = password.trim(),
-                            username = username.trim().ifBlank { null }
-                        )
+                        Log.d("CheckCheqAuth", "Launching Google sign-in intent")
+                        launcher.launch(googleSignInClient.signInIntent)
                     },
                     enabled = !state.isLoading
                 ) {
-                    Text("Create account")
+                    Text("Sign in with Google")
                 }
-            }
-
-            Spacer(Modifier.height(12.dp))
-
-            // Divider with OR between email methods and Google sign-in
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Divider(modifier = Modifier.weight(1f))
-                Text("OR")
-                Divider(modifier = Modifier.weight(1f))
-            }
-
-            // --- Google Sign-In button ---
-            Button(
-                onClick = {
-                    Log.d("CheckCheqAuth", "Launching Google sign-in intent")
-                    launcher.launch(googleSignInClient.signInIntent)
-                },
-                enabled = !state.isLoading
-            ) {
-                Text("Sign in with Google")
             }
 
             if (state.isLoading) {
                 Spacer(Modifier.height(16.dp))
                 CircularProgressIndicator()
             }
+
+            Spacer(Modifier.height(8.dp))
+
+            // Toggle between login and register modes
+            TextButton(
+                onClick = {
+                    setIsRegisterMode(!isRegisterMode)
+                    authViewModel.clearError()
+                }
+            ) {
+                Text(
+                    if (isRegisterMode)
+                        "Already have an account? Sign in"
+                    else
+                        "Not a user? Create an account"
+                )
+            }
         }
 
-        // Snackbar for auth error messages, anchored to bottom
+        // Error snackbar
         if (state.errorMessage != null) {
             Box(
                 modifier = Modifier

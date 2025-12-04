@@ -27,5 +27,12 @@ interface PricePostRepository {
     /**
      * Remove all locally stored posts.
      */
+
+    suspend fun update(post: PricePost)
+    suspend fun deleteById(id: Long)
+
+    /**
+     * Remove all locally stored posts.
+     */
     suspend fun clear()
 }
