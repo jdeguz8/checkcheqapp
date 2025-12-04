@@ -15,6 +15,9 @@ data class BasketItem(
 
 // --- mapping helpers between Entity and domain model ---
 
+/**
+ * Entity to domain model helper
+ * */
 fun BasketItemEntity.toDomain(): BasketItem =
     BasketItem(
         id = id,
@@ -23,6 +26,9 @@ fun BasketItemEntity.toDomain(): BasketItem =
         price = price
     )
 
+/**
+ * Entity to domain model helper
+ * */
 fun BasketItem.toEntity(): BasketItemEntity =
     BasketItemEntity(
         id = id,

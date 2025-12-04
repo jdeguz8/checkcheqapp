@@ -14,6 +14,10 @@ import androidx.room.PrimaryKey
     tableName = "items",
     indices = [Index(value = ["name"], unique = true)]
 )
+
+/**
+ main entity item for ItemEntity
+ */
 data class ItemEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,

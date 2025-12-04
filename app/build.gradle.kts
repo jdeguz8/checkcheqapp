@@ -1,3 +1,6 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -13,13 +16,56 @@ android {
     namespace = "com.jdeguzman.checkcheqapp"
     compileSdk = 35
 
+    // ---- Load secrets from local.properties once ----
+    val localProps = Properties().apply {
+        val localPropsFile = rootProject.file("local.properties")
+        if (localPropsFile.exists()) {
+            FileInputStream(localPropsFile).use { fis ->
+                load(fis)
+            }
+        }
+    }
+
+    val mapsApiKey: String = localProps.getProperty("MAPS_API_KEY") ?: ""
+    val webClientId: String = localProps.getProperty("WEB_CLIENT_ID") ?: ""
+
     defaultConfig {
         applicationId = "com.jdeguzman.checkcheqapp"
         minSdk = 26
         targetSdk = 35
         versionCode = 1
         versionName = "0.1.0"
+
+        // 1)Manifest placeholder (Maps API key)
+        manifestPlaceholders["GOOGLE_MAPS_API_KEY"] = mapsApiKey
+
+        resValue("string", "google_maps_key", mapsApiKey)
+
+        buildConfigField(
+            "String",
+            "YELP_API_KEY",
+            "\"${localProps.getProperty("YELP_API_KEY")}\""
+        )
     }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+    kotlin {
+        jvmToolchain(17)
+    }
+
+    buildFeatures {
+        compose = true
+        buildConfig = true
+    }
+
+    // (Optional but nice for Room migration tests)
+    sourceSets["test"].assets.srcDir("$projectDir/schemas")
+    sourceSets["androidTest"].assets.srcDir("$projectDir/schemas")
+
+
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -64,6 +110,7 @@ dependencies {
     implementation("com.squareup.retrofit2:converter-moshi:2.11.0")
 
     implementation("com.squareup.moshi:moshi:1.15.1")
+    implementation("com.squareup.moshi:moshi-kotlin:1.15.1")
 
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")

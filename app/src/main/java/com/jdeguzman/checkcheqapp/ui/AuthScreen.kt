@@ -36,6 +36,10 @@ import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
 import com.jdeguzman.checkcheqapp.R
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.dp
+
 
 /**
  * High-level authentication screen for CheckCheq.
@@ -130,16 +134,25 @@ fun AuthScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            Image(
+                painter = painterResource(id = R.drawable.checkcheq_logo),
+                contentDescription = "CheckCheq logo",
+                modifier = Modifier.size(140.dp)
+            )
+
             Text(
                 text = if (isRegisterMode) "Create your CheckCheq account" else "Welcome to CheckCheq",
-                style = MaterialTheme.typography.headlineMedium
+                style = MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.primary
             )
+
             Text(
                 text = if (isRegisterMode)
                     "Sign up to start saving and sharing nearby prices."
                 else
                     "Sign in to save and share nearby price posts.",
-                style = MaterialTheme.typography.bodyMedium
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
             Spacer(Modifier.height(8.dp))

@@ -3,11 +3,13 @@ package com.jdeguzman.checkcheqapp.ui
 import android.content.Intent
 import android.location.Location
 import android.net.Uri
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
@@ -34,6 +36,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -45,15 +48,12 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.google.android.gms.location.LocationServices
 import com.google.firebase.auth.FirebaseAuth
+import com.jdeguzman.checkcheqapp.data.remote.yelp.YelpBusiness
 import com.jdeguzman.checkcheqapp.domain.PricePost
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 import java.text.DateFormat
 import java.util.Date
-import androidx.compose.foundation.clickable
-import androidx.compose.material.icons.filled.ArrowDropDown
-
-
 
 /**
  * Detail screen for a single [PricePost].
@@ -68,13 +68,17 @@ import androidx.compose.material.icons.filled.ArrowDropDown
  * If the current user is the owner of the post:
  * - "Edit post" dialog (update store, item, price, category)
  * - "Delete post" button
+ *
+ * If the post looks like a restaurant/cafe/food place:
+ * - Yelp info card with rating, review count, and price tier.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PricePostDetailsScreen(
     postId: Long,
     onBack: () -> Unit,
-    viewModel: MyStoresViewModel = hiltViewModel()
+    viewModel: MyStoresViewModel = hiltViewModel(),
+    yelpViewModel: YelpViewModel = hiltViewModel()
 ) {
     val posts by viewModel.pins.collectAsState()
     val post = posts.firstOrNull { it.id == postId }
@@ -142,6 +146,26 @@ fun PricePostDetailsScreen(
         detailsDistanceText(userLocation, post)
     }
     val postedBy = post.postedBy ?: "Anonymous"
+
+    // Determine if this is a "restaurant-ish" post for Yelp
+    val isRestaurantLike = remember(categoryLabel) {
+        val lower = categoryLabel.lowercase()
+        lower == "restaurant" ||
+                lower == "fast food" ||
+                lower == "cafe" ||
+                lower == "bakery"
+    }
+
+
+// Yelp state
+    val yelpState by yelpViewModel.uiState.collectAsState()
+
+// Load Yelp info once for this post, only if it's restaurant-like
+    LaunchedEffect(post.id, isRestaurantLike) {
+        if (isRestaurantLike) {
+            yelpViewModel.loadForPost(post)
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -254,7 +278,7 @@ fun PricePostDetailsScreen(
                 Text(
                     text = "Posted on $formattedDate",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.typography.bodySmall.color
                 )
 
                 if (distanceText != null) {
@@ -346,6 +370,48 @@ fun PricePostDetailsScreen(
                     style = MaterialTheme.typography.bodyMedium
                 )
 
+                Spacer(Modifier.height(24.dp))
+                Divider()
+                Spacer(Modifier.height(16.dp))
+
+                // Yelp info block – only for food-like categories
+                // Yelp info block – only for food-like categories
+                if (isRestaurantLike) {
+                    val business = yelpState.business  // <-- local snapshot, NOT delegated
+
+                    when {
+                        yelpState.isLoading -> {
+                            Text(
+                                text = "Loading Yelp info…",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        yelpState.error != null -> {
+                            Text(
+                                text = "Yelp error: ${yelpState.error}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
+
+                        business != null -> {
+                            // use the local val, so smart cast is allowed
+                            YelpInfoCard(business = business)
+                        }
+
+                        else -> {
+                            Text(
+                                text = "No Yelp details found for this place.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+
+
                 // Owner-only actions: edit / delete
                 if (isOwner) {
                     Spacer(Modifier.height(24.dp))
@@ -403,15 +469,6 @@ fun PricePostDetailsScreen(
     }
 }
 
-/**
- * Dialog that lets the owner edit the main fields of a [PricePost].
- *
- * Currently allows editing:
- * - store/restaurant name
- * - item/dish name
- * - price
- * - category (from a small preset list)
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun EditPostDialog(
@@ -544,5 +601,54 @@ private fun detailsDistanceText(
         "${meters.toInt()} m away"
     } else {
         String.format("%.1f km away", meters / 1000f)
+    }
+}
+
+@Composable
+private fun YelpInfoCard(
+    business: YelpBusiness
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                text = "Yelp info",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+
+            Text(
+                text = business.name,
+                style = MaterialTheme.typography.bodyMedium
+            )
+
+            val ratingText = business.rating?.let { rating ->
+                val count = business.review_count ?: 0
+                "⭐ %.1f (%d reviews)".format(rating, count)
+            }
+
+            ratingText?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            business.price?.let { priceTier ->
+                Text(
+                    text = "Price tier: $priceTier",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
     }
 }

@@ -6,6 +6,5 @@
 
     <!-- Paste the client_id from google-services.json here -->
     <string name="default_web_client_id">
-        1001128796138-274ogmmqpiide7mht4j5fgnd52qaijr9.apps.googleusercontent.com
     </string>
 </resources>

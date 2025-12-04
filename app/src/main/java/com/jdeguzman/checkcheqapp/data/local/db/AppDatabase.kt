@@ -27,7 +27,7 @@ import com.jdeguzman.checkcheqapp.data.local.entity.PricePostEntity
         BasketItemEntity::class,
         PricePostEntity::class
     ],
-    version = 20,          // bump this so Room recreates the DB
+    version = 21,          // bump this so Room recreates the DB
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
