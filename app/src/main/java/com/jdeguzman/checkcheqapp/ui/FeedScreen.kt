@@ -51,12 +51,23 @@ import java.util.Date
 fun FeedScreen(
     viewModel: MyStoresViewModel = hiltViewModel(),
     settingsViewModel: SettingsViewModel = hiltViewModel(),
+    authViewModel: AuthViewModel = hiltViewModel(),
     onOpenMap: () -> Unit = {},
     onOpenPostDetails: (Long) -> Unit = {}
 )
+
  {
-    val posts by viewModel.pins.collectAsState()
+     val posts by viewModel.pins.collectAsState()
      val settingsState by settingsViewModel.uiState.collectAsState()
+
+     val authState by authViewModel.uiState.collectAsState()
+
+     val signedInLabel = when {
+         authState.displayName != null -> "Signed in as ${authState.displayName}"
+         authState.email != null -> "Signed in as ${authState.email}"
+         else -> "Browsing as guest"
+     }
+
 
 
      var selectedPost by remember { mutableStateOf<PricePost?>(null) }
@@ -146,21 +157,36 @@ fun FeedScreen(
             .padding(16.dp)
     ) {
         // Header row
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "Latest posts",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold
-            )
+         Column(
+             modifier = Modifier.fillMaxWidth()
+         ) {
+             Row(
+                 modifier = Modifier.fillMaxWidth(),
+                 horizontalArrangement = Arrangement.SpaceBetween,
+                 verticalAlignment = Alignment.CenterVertically
+             ) {
+                 Text(
+                     text = "Latest posts",
+                     style = MaterialTheme.typography.titleLarge,
+                     fontWeight = FontWeight.SemiBold
+                 )
 
-            TextButton(onClick = onOpenMap) {
-                Text("Open map")
-            }
-        }
+                 TextButton(onClick = onOpenMap) {
+                     Text("Open map")
+                 }
+             }
+
+             Spacer(Modifier.height(4.dp))
+
+             Text(
+                 text = signedInLabel,
+                 style = MaterialTheme.typography.bodySmall,
+                 color = MaterialTheme.colorScheme.onSurfaceVariant
+             )
+         }
+
+         Spacer(Modifier.height(8.dp))
+
 
         Spacer(Modifier.height(8.dp))
 
