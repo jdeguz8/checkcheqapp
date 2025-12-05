@@ -1,6 +1,8 @@
 import java.util.Properties
 import java.io.FileInputStream
-import org.jetbrains.dokka.gradle.DokkaTask   // 👈 add this import
+import org.jetbrains.dokka.gradle.DokkaTask
+
+
 
 plugins {
     id("com.android.application")
@@ -158,4 +160,8 @@ tasks.withType<DokkaTask>().configureEach {
         // skipDeprecated.set(true)
         // reportUndocumented.set(false)
     }
+}
+tasks.withType<DokkaTask>().configureEach {
+    // Output to the root-level "docs" folder
+    outputDirectory.set(rootDir.resolve("docs"))
 }

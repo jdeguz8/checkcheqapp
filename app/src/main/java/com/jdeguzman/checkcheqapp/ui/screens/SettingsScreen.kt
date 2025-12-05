@@ -26,22 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.jdeguzman.checkcheqapp.R
 import com.jdeguzman.checkcheqapp.domain.ThemeMode
-
-/**
- * Settings screen for CheckCheq.
- *
- * Lets the user:
- * - View basic account info and sign out
- * - Choose appearance (System / Light / Dark)
- * - Configure "near me" radius and whether the feed starts with near-me enabled
- * - Pick a default category filter for the feed
- *
- * This composable reads from [SettingsViewModel.uiState] and delegates all mutations
- * back to the ViewModel, so the actual values are persisted via DataStore.
- *
- * @param settingsViewModel ViewModel exposing and persisting app settings (radius, category, theme).
- * @param authViewModel Shared [AuthViewModel] used to sign the current user out when requested.
- */
+import com.jdeguzman.checkcheqapp.ui.AuthViewModel
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -132,7 +117,7 @@ fun SettingsScreen(
             }
         }
 
-        // 🔹 Appearance (theme)
+        // 🔹 Appearance (theme + text size)
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
@@ -146,6 +131,7 @@ fun SettingsScreen(
                     style = MaterialTheme.typography.titleMedium
                 )
 
+                // Theme mode chips
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     FilterChip(
                         selected = state.themeMode == ThemeMode.SYSTEM,
@@ -166,6 +152,39 @@ fun SettingsScreen(
 
                 Text(
                     text = "For accessibility, you can force Light mode even if your phone is set to Dark.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Divider(modifier = Modifier.padding(vertical = 8.dp))
+
+                // 🔹 Text size controls
+                Text(
+                    text = "Text size",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+
+                val textSizeOptions = listOf(
+                    1.0f to "Default",
+                    1.15f to "Large",
+                    1.3f to "Extra large"
+                )
+
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    textSizeOptions.forEach { (scale, label) ->
+                        FilterChip(
+                            selected = kotlin.math.abs(state.fontScale - scale) < 0.01f,
+                            onClick = { settingsViewModel.onFontScaleChanged(scale) },
+                            label = { Text(label) }
+                        )
+                    }
+                }
+
+                Text(
+                    text = "This scales most text inside CheckCheq. It stacks on top of your system font size.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -266,7 +285,10 @@ fun SettingsScreen(
                             )
                         }
                     }
+
                 }
+
+
             }
         }
 

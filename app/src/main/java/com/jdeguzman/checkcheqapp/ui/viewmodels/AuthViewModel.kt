@@ -34,11 +34,16 @@ data class AuthUiState(
 /**
  * ViewModel responsible for user authentication in CheckCheq.
  *
- * Wraps [FirebaseAuth] and exposes [AuthUiState] to the UI layer.
+ * This ViewModel wraps FirebaseAuth and exposes a simple [AuthUiState] to the UI layer.
  *
  * Supported authentication methods:
  * - Google Sign-In via ID token ([signInWithGoogleIdToken])
  * - Email & password registration + sign-in ([registerWithEmail], [signInWithEmail])
+ *
+ * The ViewModel:
+ * - Keeps track of the current Firebase user
+ * - Exposes loading and error states to drive UI feedback
+ * - Updates [displayName] and [email] after each successful auth operation
  */
 @HiltViewModel
 class AuthViewModel @Inject constructor() : ViewModel() {
@@ -62,7 +67,10 @@ class AuthViewModel @Inject constructor() : ViewModel() {
     /**
      * Sign in to Firebase using a Google ID token from GoogleSignInClient.
      *
-     * @param idToken Google ID token obtained from GoogleSignInAccount.idToken.
+     * This is called after Google Sign-In completes successfully and returns an ID token.
+     * On success, [uiState] is updated with the new user's displayName and email.
+     *
+     * @param idToken Google ID token obtained from GoogleSignInAccount.idToken
      */
     fun signInWithGoogleIdToken(idToken: String) {
         viewModelScope.launch {
@@ -99,8 +107,13 @@ class AuthViewModel @Inject constructor() : ViewModel() {
      *
      * If [username] is provided and not blank, the method also updates
      * the Firebase user's profile so that [displayName] reflects that username.
+     * This username is then used throughout the app, for example as "postedBy".
      *
      * On success, the user is considered signed in.
+     *
+     * @param email email address to register.
+     * @param password password for the new account.
+     * @param username optional username to store as Firebase displayName.
      */
     fun registerWithEmail(email: String, password: String, username: String? = null) {
         viewModelScope.launch {
@@ -146,6 +159,9 @@ class AuthViewModel @Inject constructor() : ViewModel() {
      * Sign in an existing Firebase user using email and password.
      *
      * On success, updates [uiState] with the signed-in user's displayName and email.
+     *
+     * @param email email address of the existing user.
+     * @param password password associated with the account.
      */
     fun signInWithEmail(email: String, password: String) {
         viewModelScope.launch {
@@ -177,7 +193,10 @@ class AuthViewModel @Inject constructor() : ViewModel() {
     }
 
     /**
-     * Sign the current user out of Firebase and reset auth state.
+     * Sign the current user out of Firebase and reset authentication state.
+     *
+     * After calling this, [uiState] reflects a signed-out user
+     * with no display name, email, or error message.
      */
     fun signOut() {
         auth.signOut()
@@ -185,7 +204,9 @@ class AuthViewModel @Inject constructor() : ViewModel() {
     }
 
     /**
-     * Clear any existing error message from the UI state.
+     * Clear any existing error message from the authentication UI state.
+     *
+     * Useful after the user dismisses an error snackbar or retries an operation.
      */
     fun clearError() {
         _uiState.update { it.copy(errorMessage = null) }

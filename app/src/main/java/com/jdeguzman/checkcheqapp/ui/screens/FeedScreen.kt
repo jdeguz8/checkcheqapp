@@ -1,4 +1,4 @@
-package com.jdeguzman.checkcheqapp.ui
+package com.jdeguzman.checkcheqapp.ui.screens
 
 import android.Manifest
 import android.content.pm.PackageManager
@@ -28,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -36,6 +37,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.google.android.gms.location.LocationServices
 import com.jdeguzman.checkcheqapp.domain.PricePost
+import com.jdeguzman.checkcheqapp.ui.AuthViewModel
+import com.jdeguzman.checkcheqapp.ui.SettingsViewModel
+import com.jdeguzman.checkcheqapp.ui.viewmodels.MyStoresViewModel
 import java.text.DateFormat
 import java.util.Date
 
@@ -199,7 +203,8 @@ fun FeedScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 8.dp),
+                    .padding(bottom = 8.dp)
+                    .semantics(mergeDescendants = true) {},   // 👈 new
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
@@ -398,10 +403,12 @@ private fun PricePostCard(
 
                     // Meta row: posted by + date + distance
                     Column {
+                        val metaColor = MaterialTheme.colorScheme.onSurfaceVariant
+
                         Text(
                             text = "Posted by $postedBy",
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color.Gray
+                            color = metaColor
                         )
 
                         Row(
@@ -411,18 +418,19 @@ private fun PricePostCard(
                             Text(
                                 text = formattedDate,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = Color.Gray
+                                color = metaColor
                             )
 
                             if (distanceText != null) {
                                 Text(
                                     text = "• $distanceText",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = Color.Gray
+                                    color = metaColor
                                 )
                             }
                         }
                     }
+
                 }
             }
         }

@@ -6,14 +6,14 @@ import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
 
-/**
- * Global shapes used by Material3 theme.
- */
 val Shapes = Shapes()
 
-// Light mode palette
+// ✅ Light mode palette
 private val LightColors = lightColorScheme(
     primary = CheckCheqGreen,
     onPrimary = Color.White,
@@ -21,13 +21,13 @@ private val LightColors = lightColorScheme(
     onSecondary = Color.Black,
     secondaryContainer = CheckCheqGreenContainer.copy(alpha = 0.08f),
     onSecondaryContainer = CheckCheqGreen,
-    surface = Color(0xFFFDFDFD),
-    background = Color(0xFFF5F5F5),
+    surface = Color(0xFFFDFDFD),      // light surface
+    background = Color(0xFFF5F5F5),   // light background
     onSurface = Color(0xFF121212),
     onBackground = Color(0xFF121212)
 )
 
-// Dark mode palette
+// ✅ Dark mode palette
 private val DarkColors = darkColorScheme(
     primary = CheckCheqGreen,
     onPrimary = Color.Black,
@@ -42,21 +42,40 @@ private val DarkColors = darkColorScheme(
 )
 
 /**
- * App theme wrapper for CheckCheq.
+ * App theme wrapper.
  *
  * @param darkTheme if true use [DarkColors], otherwise [LightColors].
- * @param content composable tree to be themed.
+ * @param fontScale relative text scale (1.0 = default, >1.0 = larger text).
  */
 @Composable
 fun CheckCheqTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
+    fontScale: Float = 1f,
     content: @Composable () -> Unit
 ) {
     val colorScheme = if (darkTheme) DarkColors else LightColors
 
+    val baseTypography = Typography
+
+    // Scale a few core styles (you can add more if you want)
+    val scaledTypography = baseTypography.copy(
+        bodySmall = baseTypography.bodySmall.copy(
+            fontSize = baseTypography.bodySmall.fontSize * fontScale
+        ),
+        bodyMedium = baseTypography.bodyMedium.copy(
+            fontSize = baseTypography.bodyMedium.fontSize * fontScale
+        ),
+        titleMedium = baseTypography.titleMedium.copy(
+            fontSize = baseTypography.titleMedium.fontSize * fontScale
+        ),
+        headlineSmall = baseTypography.headlineSmall?.copy(
+            fontSize = (baseTypography.headlineSmall.fontSize * fontScale)
+        ) ?: baseTypography.headlineSmall
+    )
+
     MaterialTheme(
         colorScheme = colorScheme,
-        typography = Typography,
+        typography = scaledTypography,
         shapes = Shapes,
         content = content
     )

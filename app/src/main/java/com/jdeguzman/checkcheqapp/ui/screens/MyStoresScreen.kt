@@ -1,4 +1,4 @@
-package com.jdeguzman.checkcheqapp.ui
+package com.jdeguzman.checkcheqapp.ui.screens
 
 import android.Manifest
 import android.annotation.SuppressLint
@@ -42,6 +42,8 @@ import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
+import com.jdeguzman.checkcheqapp.ui.SettingsViewModel
+import com.jdeguzman.checkcheqapp.ui.viewmodels.MyStoresViewModel
 import kotlinx.coroutines.launch
 
 /**
@@ -348,21 +350,24 @@ fun MyStoresScreen(
                                             strokeWidth = 2.dp
                                         )
                                     }
-
                                     searchQuery.isNotBlank() -> {
-                                        IconButton(onClick = {
-                                            searchQuery = ""
-                                            searchResults = emptyList()
-                                            searchError = null
-                                            sessionToken =
-                                                AutocompleteSessionToken.newInstance()
-                                        }) {
+                                        IconButton(
+                                            onClick = {
+                                                searchQuery = ""
+                                                searchResults = emptyList()
+                                                searchError = null
+                                                sessionToken = AutocompleteSessionToken.newInstance()
+                                            },
+                                            modifier = Modifier.sizeIn(
+                                                minWidth = 48.dp,
+                                                minHeight = 48.dp)                                        ) {
                                             Icon(
                                                 imageVector = Icons.Default.Clear,
-                                                contentDescription = "Clear"
+                                                contentDescription = "Clear search text"
                                             )
                                         }
                                     }
+
                                 }
                             }
                         )

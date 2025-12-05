@@ -1,4 +1,4 @@
-package com.jdeguzman.checkcheqapp.ui
+package com.jdeguzman.checkcheqapp.ui.screens
 
 import android.app.Activity
 import android.util.Log
@@ -38,6 +38,7 @@ import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
 import com.jdeguzman.checkcheqapp.R
+import com.jdeguzman.checkcheqapp.ui.AuthViewModel
 
 /**
  * High-level authentication screen for CheckCheq.
@@ -187,7 +188,10 @@ fun AuthScreen(
                         "Show password"
                     }
 
-                    IconButton(onClick = { setIsPasswordVisible(!isPasswordVisible) }) {
+                    IconButton(
+                        onClick = { setIsPasswordVisible(!isPasswordVisible) },
+                        modifier = Modifier.size(48.dp)   // ensure ≥ 48dp touch target
+                    ) {
                         Icon(
                             imageVector = icon,
                             contentDescription = description

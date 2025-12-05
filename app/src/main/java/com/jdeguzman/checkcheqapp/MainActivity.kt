@@ -6,7 +6,6 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Settings
@@ -26,14 +25,14 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.google.android.libraries.places.api.Places
 import com.jdeguzman.checkcheqapp.domain.ThemeMode
-import com.jdeguzman.checkcheqapp.ui.AuthScreen
 import com.jdeguzman.checkcheqapp.ui.AuthViewModel
-import com.jdeguzman.checkcheqapp.ui.FeedScreen
-import com.jdeguzman.checkcheqapp.ui.MyStoresScreen
-import com.jdeguzman.checkcheqapp.ui.MyStoresViewModel
-import com.jdeguzman.checkcheqapp.ui.PricePostDetailsScreen
-import com.jdeguzman.checkcheqapp.ui.SettingsScreen
 import com.jdeguzman.checkcheqapp.ui.SettingsViewModel
+import com.jdeguzman.checkcheqapp.ui.screens.AuthScreen
+import com.jdeguzman.checkcheqapp.ui.screens.FeedScreen
+import com.jdeguzman.checkcheqapp.ui.screens.MyStoresScreen
+import com.jdeguzman.checkcheqapp.ui.viewmodels.MyStoresViewModel
+import com.jdeguzman.checkcheqapp.ui.screens.PricePostDetailsScreen
+import com.jdeguzman.checkcheqapp.ui.SettingsScreen
 import com.jdeguzman.checkcheqapp.ui.theme.CheckCheqTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -54,7 +53,6 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // ✅ Initialize Places SDK once
         if (!Places.isInitialized()) {
             Places.initialize(
                 applicationContext,
@@ -66,22 +64,19 @@ class MainActivity : ComponentActivity() {
             val settingsViewModel: SettingsViewModel = hiltViewModel()
             val settingsState by settingsViewModel.uiState.collectAsState()
 
-            // 🔹 Drive theme from settings
             val systemDark = isSystemInDarkTheme()
-
             val darkTheme = when (settingsState.themeMode) {
                 ThemeMode.SYSTEM -> systemDark
                 ThemeMode.LIGHT  -> false
                 ThemeMode.DARK   -> true
             }
 
+            val fontScale = settingsState.fontScale
 
-            CheckCheqTheme(darkTheme = darkTheme) {
-                CheckCheqAppRoot(settingsViewModel = settingsViewModel)
-            }
-
-            // You can later wire darkTheme from SettingsViewModel if you want
-            CheckCheqTheme(darkTheme = darkTheme) {
+            CheckCheqTheme(
+                darkTheme = darkTheme,
+                fontScale = fontScale
+            ) {
                 CheckCheqAppRoot(settingsViewModel = settingsViewModel)
             }
         }

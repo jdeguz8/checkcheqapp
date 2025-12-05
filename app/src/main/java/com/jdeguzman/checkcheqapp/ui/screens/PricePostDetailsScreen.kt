@@ -1,4 +1,4 @@
-package com.jdeguzman.checkcheqapp.ui
+package com.jdeguzman.checkcheqapp.ui.screens
 
 import android.content.Intent
 import android.location.Location
@@ -20,7 +20,6 @@ import androidx.compose.material3.Divider
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -36,7 +35,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,6 +48,8 @@ import com.google.android.gms.location.LocationServices
 import com.google.firebase.auth.FirebaseAuth
 import com.jdeguzman.checkcheqapp.data.remote.yelp.YelpBusiness
 import com.jdeguzman.checkcheqapp.domain.PricePost
+import com.jdeguzman.checkcheqapp.ui.viewmodels.YelpViewModel
+import com.jdeguzman.checkcheqapp.ui.viewmodels.MyStoresViewModel
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 import java.text.DateFormat

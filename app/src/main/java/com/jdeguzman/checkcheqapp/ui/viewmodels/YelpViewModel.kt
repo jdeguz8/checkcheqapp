@@ -1,4 +1,4 @@
-package com.jdeguzman.checkcheqapp.ui
+package com.jdeguzman.checkcheqapp.ui.viewmodels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope

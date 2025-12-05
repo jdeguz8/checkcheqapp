@@ -13,19 +13,8 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
- * ViewModel that exposes global app settings to the UI and persists changes.
- *
- * Responsibilities:
- * - Collects settings from [SettingsRepository.settingsFlow] (DataStore-backed)
- * - Reads the current Firebase user to populate account info for the Settings screen
- * - Provides intents for updating:
- *   - Near-me search radius
- *   - Whether the feed starts in "near me" mode
- *   - Default category filter
- *   - Theme mode (System / Light / Dark)
- * - Handles sign-out and clears user-related fields in [SettingsUiState].
+ * UI-facing state for Settings screen + global app settings.
  */
-
 data class SettingsUiState(
     val isSignedIn: Boolean = false,
     val displayName: String? = null,
@@ -35,7 +24,8 @@ data class SettingsUiState(
     val startWithNearMe: Boolean = false,
     val defaultCategory: String = "All",
 
-    val themeMode: ThemeMode = ThemeMode.SYSTEM
+    val themeMode: ThemeMode = ThemeMode.SYSTEM,
+    val fontScale: Float = 1.0f
 )
 
 @HiltViewModel
@@ -59,6 +49,7 @@ class SettingsViewModel @Inject constructor(
                         startWithNearMe = data.startWithNearMe,
                         defaultCategory = data.defaultCategory,
                         themeMode = data.themeMode,
+                        fontScale = data.fontScale,
                         isSignedIn = user != null,
                         displayName = user?.displayName,
                         email = user?.email
@@ -89,6 +80,15 @@ class SettingsViewModel @Inject constructor(
     fun onThemeModeChanged(mode: ThemeMode) {
         viewModelScope.launch {
             settingsRepo.setThemeMode(mode)
+        }
+    }
+
+    /**
+     * Update the global text scale factor for the app.
+     */
+    fun onFontScaleChanged(scale: Float) {
+        viewModelScope.launch {
+            settingsRepo.setFontScale(scale)
         }
     }
 

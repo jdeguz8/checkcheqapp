@@ -4,6 +4,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.jdeguzman.checkcheqapp.domain.ThemeMode
@@ -13,18 +14,16 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Strongly-typed snapshot of all persisted settings.
+ * Strongly-typed wrapper around DataStore for app settings.
  */
 data class SettingsData(
     val nearMeRadiusMeters: Int = 1000,
     val startWithNearMe: Boolean = false,
     val defaultCategory: String = "All",
-    val themeMode: ThemeMode = ThemeMode.SYSTEM
+    val themeMode: ThemeMode = ThemeMode.SYSTEM,
+    val fontScale: Float = 1.0f // 1.0 = default, >1.0 = larger text
 )
 
-/**
- * Repository that wraps [DataStore] access for user settings.
- */
 @Singleton
 class SettingsRepository @Inject constructor(
     private val dataStore: DataStore<Preferences>
@@ -35,6 +34,7 @@ class SettingsRepository @Inject constructor(
         val START_WITH_NEAR_ME = booleanPreferencesKey("start_with_near_me")
         val DEFAULT_CATEGORY = stringPreferencesKey("default_category")
         val THEME_MODE = stringPreferencesKey("theme_mode")
+        val FONT_SCALE = floatPreferencesKey("font_scale")
     }
 
     /**
@@ -45,6 +45,7 @@ class SettingsRepository @Inject constructor(
         val near = prefs[Keys.START_WITH_NEAR_ME] ?: false
         val category = prefs[Keys.DEFAULT_CATEGORY] ?: "All"
         val themeStr = prefs[Keys.THEME_MODE] ?: "system"
+        val fontScale = prefs[Keys.FONT_SCALE] ?: 1.0f
 
         val themeMode = when (themeStr) {
             "light" -> ThemeMode.LIGHT
@@ -56,42 +57,23 @@ class SettingsRepository @Inject constructor(
             nearMeRadiusMeters = radius,
             startWithNearMe = near,
             defaultCategory = category,
-            themeMode = themeMode
+            themeMode = themeMode,
+            fontScale = fontScale
         )
     }
 
-    /**
-     * Persist a new near-me radius.
-     *
-     * @param meters radius in meters.
-     */
     suspend fun setNearMeRadius(meters: Int) {
         dataStore.edit { it[Keys.NEAR_ME_RADIUS] = meters }
     }
 
-    /**
-     * Persist whether the feed should start with near-me filtering enabled.
-     *
-     * @param enabled true to enable, false to disable.
-     */
     suspend fun setStartWithNearMe(enabled: Boolean) {
         dataStore.edit { it[Keys.START_WITH_NEAR_ME] = enabled }
     }
 
-    /**
-     * Persist the default category filter used by the feed.
-     *
-     * @param category category name (e.g. "Grocery", "All").
-     */
     suspend fun setDefaultCategory(category: String) {
         dataStore.edit { it[Keys.DEFAULT_CATEGORY] = category }
     }
 
-    /**
-     * Persist the current theme selection.
-     *
-     * @param mode one of [ThemeMode.SYSTEM], [ThemeMode.LIGHT], or [ThemeMode.DARK].
-     */
     suspend fun setThemeMode(mode: ThemeMode) {
         val encoded = when (mode) {
             ThemeMode.SYSTEM -> "system"
@@ -99,5 +81,14 @@ class SettingsRepository @Inject constructor(
             ThemeMode.DARK -> "dark"
         }
         dataStore.edit { it[Keys.THEME_MODE] = encoded }
+    }
+
+    /**
+     * Persist the chosen text scale factor.
+     *
+     * @param scale relative font scale (1.0 = default, 1.15 = large, etc.).
+     */
+    suspend fun setFontScale(scale: Float) {
+        dataStore.edit { it[Keys.FONT_SCALE] = scale }
     }
 }
