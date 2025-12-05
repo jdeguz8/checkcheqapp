@@ -3,13 +3,14 @@ package com.jdeguzman.checkcheqapp
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
@@ -24,6 +25,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.google.android.libraries.places.api.Places
+import com.jdeguzman.checkcheqapp.domain.ThemeMode
 import com.jdeguzman.checkcheqapp.ui.AuthScreen
 import com.jdeguzman.checkcheqapp.ui.AuthViewModel
 import com.jdeguzman.checkcheqapp.ui.FeedScreen
@@ -35,12 +37,6 @@ import com.jdeguzman.checkcheqapp.ui.SettingsViewModel
 import com.jdeguzman.checkcheqapp.ui.theme.CheckCheqTheme
 import dagger.hilt.android.AndroidEntryPoint
 
-/**
- * Single-activity host for the Composable UI.
- *
- * Initializes the Places SDK and sets the root composable, which
- * sets up navigation between Feed, Map, Settings, and Details screens.
- */
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
@@ -51,44 +47,61 @@ class MainActivity : ComponentActivity() {
         if (!Places.isInitialized()) {
             Places.initialize(
                 applicationContext,
-                getString(R.string.google_maps_key)   // same key you use for Maps
+                getString(R.string.google_maps_key)
             )
         }
 
         setContent {
-            CheckCheqTheme {
-                CheckCheqAppRoot()
+            val settingsViewModel: SettingsViewModel = hiltViewModel()
+            val settingsState by settingsViewModel.uiState.collectAsState()
+
+            // 🔹 Drive theme from settings
+            val systemDark = isSystemInDarkTheme()
+
+            val darkTheme = when (settingsState.themeMode) {
+                ThemeMode.SYSTEM -> systemDark
+                ThemeMode.LIGHT  -> false
+                ThemeMode.DARK   -> true
+            }
+
+
+            CheckCheqTheme(darkTheme = darkTheme) {
+                CheckCheqAppRoot(settingsViewModel = settingsViewModel)
+            }
+
+            // You can later wire darkTheme from SettingsViewModel if you want
+            CheckCheqTheme(darkTheme = darkTheme) {
+                CheckCheqAppRoot(settingsViewModel = settingsViewModel)
             }
         }
     }
 }
 
+/**
+ * Top-level composable that decides whether to show:
+ * - AuthScreen (if user is signed out)
+ * - Main app with bottom navigation (if signed in)
+ */
 @Composable
-fun CheckCheqAppRoot() {
-    // One AuthViewModel for the whole activity
+fun CheckCheqAppRoot(
+    settingsViewModel: SettingsViewModel
+) {
+    // 🔹 Auth state – controls whether we show AuthScreen or the main app
     val authViewModel: AuthViewModel = hiltViewModel()
     val authState by authViewModel.uiState.collectAsState()
 
     if (!authState.isSignedIn) {
-        // 🔐 Not signed in → show auth screen
         AuthScreen(authViewModel = authViewModel)
-    } else {
-        // ✅ Signed in → show main app with bottom nav
-        MainAppScaffold(authViewModel = authViewModel)
+        return
     }
-}
 
-@Composable
-private fun MainAppScaffold(
-    authViewModel: AuthViewModel
-) {
+    // 🔹 Navigation + shared VMs
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route ?: "feed"
 
-    // Shared VM for map + feed
+    // Shared between feed, map, details
     val myStoresViewModel: MyStoresViewModel = hiltViewModel()
-    val settingsViewModel: SettingsViewModel = hiltViewModel()
 
     Scaffold(
         bottomBar = {
@@ -146,27 +159,34 @@ private fun MainAppScaffold(
             composable("feed") {
                 FeedScreen(
                     viewModel = myStoresViewModel,
+                    settingsViewModel = settingsViewModel,
                     onOpenMap = { navController.navigate("map") },
                     onOpenPostDetails = { postId ->
                         navController.navigate("details/$postId")
                     }
                 )
             }
+
             composable("map") {
                 MyStoresScreen(
                     onBack = { navController.navigate("feed") },
                     viewModel = myStoresViewModel
                 )
             }
+
             composable("settings") {
                 SettingsScreen(
                     settingsViewModel = settingsViewModel,
                     authViewModel = authViewModel
                 )
             }
+
             composable("details/{postId}") { backStackEntry ->
-                val postId =
-                    backStackEntry.arguments?.getString("postId")?.toLongOrNull() ?: -1L
+                val postId = backStackEntry
+                    .arguments
+                    ?.getString("postId")
+                    ?.toLongOrNull() ?: -1L
+
                 PricePostDetailsScreen(
                     postId = postId,
                     viewModel = myStoresViewModel,

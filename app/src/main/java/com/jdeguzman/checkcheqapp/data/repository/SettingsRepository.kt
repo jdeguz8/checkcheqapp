@@ -6,45 +6,75 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.jdeguzman.checkcheqapp.domain.ThemeMode
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
 
-data class UserSettings(
-    val nearMeRadiusMeters: Int = 1000,   // 1 km
+/**
+ * Strongly-typed wrapper around DataStore for app settings.
+ */
+data class SettingsData(
+    val nearMeRadiusMeters: Int = 1000,
     val startWithNearMe: Boolean = false,
-    val defaultCategory: String = "All"
+    val defaultCategory: String = "All",
+    val themeMode: ThemeMode = ThemeMode.SYSTEM
 )
 
 @Singleton
 class SettingsRepository @Inject constructor(
     private val dataStore: DataStore<Preferences>
 ) {
-    companion object {
-        private val KEY_NEAR_ME_RADIUS = intPreferencesKey("near_me_radius_meters")
-        private val KEY_START_WITH_NEAR_ME = booleanPreferencesKey("start_with_near_me")
-        private val KEY_DEFAULT_CATEGORY = stringPreferencesKey("default_category")
+
+    private object Keys {
+        val NEAR_ME_RADIUS = intPreferencesKey("near_me_radius_m")
+        val START_WITH_NEAR_ME = booleanPreferencesKey("start_with_near_me")
+        val DEFAULT_CATEGORY = stringPreferencesKey("default_category")
+        val THEME_MODE = stringPreferencesKey("theme_mode")
     }
 
-    val settingsFlow: Flow<UserSettings> =
-        dataStore.data.map { prefs ->
-            UserSettings(
-                nearMeRadiusMeters = prefs[KEY_NEAR_ME_RADIUS] ?: 1000,
-                startWithNearMe = prefs[KEY_START_WITH_NEAR_ME] ?: false,
-                defaultCategory = prefs[KEY_DEFAULT_CATEGORY] ?: "All"
-            )
+    /**
+     * Observe all persisted settings as a single stream.
+     */
+    val settingsFlow: Flow<SettingsData> = dataStore.data.map { prefs ->
+        val radius = prefs[Keys.NEAR_ME_RADIUS] ?: 1000
+        val near = prefs[Keys.START_WITH_NEAR_ME] ?: false
+        val category = prefs[Keys.DEFAULT_CATEGORY] ?: "All"
+        val themeStr = prefs[Keys.THEME_MODE] ?: "system"
+
+        val themeMode = when (themeStr) {
+            "light" -> ThemeMode.LIGHT
+            "dark" -> ThemeMode.DARK
+            else -> ThemeMode.SYSTEM
         }
 
+        SettingsData(
+            nearMeRadiusMeters = radius,
+            startWithNearMe = near,
+            defaultCategory = category,
+            themeMode = themeMode
+        )
+    }
+
     suspend fun setNearMeRadius(meters: Int) {
-        dataStore.edit { it[KEY_NEAR_ME_RADIUS] = meters }
+        dataStore.edit { it[Keys.NEAR_ME_RADIUS] = meters }
     }
 
     suspend fun setStartWithNearMe(enabled: Boolean) {
-        dataStore.edit { it[KEY_START_WITH_NEAR_ME] = enabled }
+        dataStore.edit { it[Keys.START_WITH_NEAR_ME] = enabled }
     }
 
     suspend fun setDefaultCategory(category: String) {
-        dataStore.edit { it[KEY_DEFAULT_CATEGORY] = category }
+        dataStore.edit { it[Keys.DEFAULT_CATEGORY] = category }
+    }
+
+    suspend fun setThemeMode(mode: ThemeMode) {
+        val encoded = when (mode) {
+            ThemeMode.SYSTEM -> "system"
+            ThemeMode.LIGHT -> "light"
+            ThemeMode.DARK -> "dark"
+        }
+        dataStore.edit { it[Keys.THEME_MODE] = encoded }
     }
 }

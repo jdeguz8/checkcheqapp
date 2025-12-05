@@ -4,22 +4,27 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.jdeguzman.checkcheqapp.data.repository.SettingsRepository
+import com.jdeguzman.checkcheqapp.domain.ThemeMode
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+/**
+ * UI-facing state for Settings screen + global app settings.
+ */
 data class SettingsUiState(
     val isSignedIn: Boolean = false,
     val displayName: String? = null,
     val email: String? = null,
+
     val nearMeRadiusMeters: Int = 1000,
     val startWithNearMe: Boolean = false,
     val defaultCategory: String = "All",
-    val isLoading: Boolean = true
+
+    val themeMode: ThemeMode = ThemeMode.SYSTEM
 )
 
 @HiltViewModel
@@ -30,48 +35,60 @@ class SettingsViewModel @Inject constructor(
     private val auth: FirebaseAuth = FirebaseAuth.getInstance()
 
     private val _uiState = MutableStateFlow(SettingsUiState())
-    val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
+    val uiState: StateFlow<SettingsUiState> = _uiState
 
     init {
+        // Observe DataStore settings and combine with Firebase user
         viewModelScope.launch {
-            settingsRepo.settingsFlow.collectLatest { s ->
+            settingsRepo.settingsFlow.collect { data ->
                 val user = auth.currentUser
-                _uiState.value = SettingsUiState(
-                    isSignedIn = user != null,
-                    displayName = user?.displayName,
-                    email = user?.email,
-                    nearMeRadiusMeters = s.nearMeRadiusMeters,
-                    startWithNearMe = s.startWithNearMe,
-                    defaultCategory = s.defaultCategory,
-                    isLoading = false
-                )
+                _uiState.update {
+                    it.copy(
+                        nearMeRadiusMeters = data.nearMeRadiusMeters,
+                        startWithNearMe = data.startWithNearMe,
+                        defaultCategory = data.defaultCategory,
+                        themeMode = data.themeMode,
+                        isSignedIn = user != null,
+                        displayName = user?.displayName,
+                        email = user?.email
+                    )
+                }
             }
         }
     }
 
     fun onNearMeRadiusSelected(meters: Int) {
-        viewModelScope.launch { settingsRepo.setNearMeRadius(meters) }
+        viewModelScope.launch {
+            settingsRepo.setNearMeRadius(meters)
+        }
     }
 
     fun onStartWithNearMeChanged(enabled: Boolean) {
-        viewModelScope.launch { settingsRepo.setStartWithNearMe(enabled) }
+        viewModelScope.launch {
+            settingsRepo.setStartWithNearMe(enabled)
+        }
     }
 
     fun onDefaultCategoryChanged(category: String) {
-        viewModelScope.launch { settingsRepo.setDefaultCategory(category) }
+        viewModelScope.launch {
+            settingsRepo.setDefaultCategory(category)
+        }
+    }
+
+    fun onThemeModeChanged(mode: ThemeMode) {
+        viewModelScope.launch {
+            settingsRepo.setThemeMode(mode)
+        }
     }
 
     fun signOut() {
         auth.signOut()
-        val current = _uiState.value
-        _uiState.value = current.copy(
-            isSignedIn = false,
-            displayName = null,
-            email = null
-        )
-    }
-    fun onSignedOut() {
-        // Optional: if you track any auth-related flags in settings state, reset them here.
-        // For now this can stay empty.
+        _uiState.update {
+            it.copy(
+                isSignedIn = false,
+                displayName = null,
+                email = null
+            )
+        }
     }
 }

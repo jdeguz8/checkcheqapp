@@ -6,23 +6,18 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Divider
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
@@ -30,29 +25,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.jdeguzman.checkcheqapp.R
+import com.jdeguzman.checkcheqapp.domain.ThemeMode
 
-/**
- * Settings screen for CheckCheq.
- *
- * Responsibilities:
- * - Shows current account info (via [AuthViewModel])
- * - Lets the user sign out
- * - Lets the user configure:
- *      - default "near me" radius for feed filtering
- *      - whether the feed starts with "near me" enabled
- *      - default category filter
- * - Shows a short "About" section describing the app
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     settingsViewModel: SettingsViewModel = hiltViewModel(),
-    authViewModel: AuthViewModel = hiltViewModel()
+    authViewModel: AuthViewModel
 ) {
-    // Distance / feed defaults come from SettingsViewModel
     val state by settingsViewModel.uiState.collectAsState()
-    // Account info comes directly from AuthViewModel so it updates immediately
-    val authState by authViewModel.uiState.collectAsState()
 
     val radiusOptions = listOf(500, 1000, 3000, 5000)
     val categoryOptions = listOf(
@@ -68,7 +49,7 @@ fun SettingsScreen(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
-        // 🔹 Logo + app name header
+        // Logo + app name
         Column(
             modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally
@@ -87,12 +68,10 @@ fun SettingsScreen(
             )
         }
 
-        // 🔹 Account card (uses AuthViewModel)
+        // 🔹 Account
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surface
-            )
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
         ) {
             Column(
                 modifier = Modifier.padding(16.dp),
@@ -103,13 +82,13 @@ fun SettingsScreen(
                     style = MaterialTheme.typography.titleMedium
                 )
 
-                if (authState.isSignedIn) {
+                if (state.isSignedIn) {
                     Text(
-                        text = authState.displayName ?: authState.email ?: "Signed in user",
+                        text = state.displayName ?: state.email ?: "Signed in user",
                         style = MaterialTheme.typography.bodyMedium
                     )
-                    authState.email?.let {
-                        if (it != authState.displayName) {
+                    state.email?.let {
+                        if (it != state.displayName) {
                             Text(
                                 text = it,
                                 style = MaterialTheme.typography.bodySmall,
@@ -120,9 +99,8 @@ fun SettingsScreen(
                     Spacer(Modifier.height(8.dp))
                     OutlinedButton(
                         onClick = {
+                            settingsViewModel.signOut()
                             authViewModel.signOut()
-                            // if SettingsViewModel tracks any auth-related flags, reset them here
-                            settingsViewModel.onSignedOut()
                         }
                     ) {
                         Text("Sign out")
@@ -133,24 +111,54 @@ fun SettingsScreen(
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    TextButton(
-                        onClick = {
-                            // in your NavHost, you could navigate to an Auth screen from here
-                            // for now this is just a placeholder
-                        }
-                    ) {
-                        Text("Sign in")
-                    }
                 }
+            }
+        }
+
+        // 🔹 Appearance (theme)
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = "Appearance",
+                    style = MaterialTheme.typography.titleMedium
+                )
+
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(
+                        selected = state.themeMode == ThemeMode.SYSTEM,
+                        onClick = { settingsViewModel.onThemeModeChanged(ThemeMode.SYSTEM) },
+                        label = { Text("System") }
+                    )
+                    FilterChip(
+                        selected = state.themeMode == ThemeMode.LIGHT,
+                        onClick = { settingsViewModel.onThemeModeChanged(ThemeMode.LIGHT) },
+                        label = { Text("Light") }
+                    )
+                    FilterChip(
+                        selected = state.themeMode == ThemeMode.DARK,
+                        onClick = { settingsViewModel.onThemeModeChanged(ThemeMode.DARK) },
+                        label = { Text("Dark") }
+                    )
+                }
+
+                Text(
+                    text = "For accessibility, you can force Light mode even if your phone is set to Dark.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
 
         // 🔹 Distance & Feed defaults
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surface
-            )
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
         ) {
             Column(
                 modifier = Modifier.padding(16.dp),
@@ -161,7 +169,6 @@ fun SettingsScreen(
                     style = MaterialTheme.typography.titleMedium
                 )
 
-                // Near-me radius chips
                 Text(
                     text = "Near me radius",
                     style = MaterialTheme.typography.bodyMedium,
@@ -180,16 +187,11 @@ fun SettingsScreen(
                         FilterChip(
                             selected = state.nearMeRadiusMeters == option,
                             onClick = { settingsViewModel.onNearMeRadiusSelected(option) },
-                            label = { Text(label) },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = MaterialTheme.colorScheme.primary,
-                                selectedLabelColor = MaterialTheme.colorScheme.onPrimary
-                            )
+                            label = { Text(label) }
                         )
                     }
                 }
 
-                // Start feed with near-me toggle
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -212,7 +214,6 @@ fun SettingsScreen(
                     )
                 }
 
-                // Default category filter dropdown
                 Text(
                     text = "Default category filter",
                     style = MaterialTheme.typography.bodyMedium,
@@ -255,9 +256,7 @@ fun SettingsScreen(
         // 🔹 About card
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surface
-            )
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
         ) {
             Column(
                 modifier = Modifier.padding(16.dp),

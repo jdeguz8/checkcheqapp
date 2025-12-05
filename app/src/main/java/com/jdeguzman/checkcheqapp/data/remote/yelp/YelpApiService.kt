@@ -11,7 +11,7 @@ data class YelpBusiness(
     val review_count: Int? = null,
     val price: String? = null,
     val url: String? = null,
-    val distance: Double? = null      // <-- meters from the search point
+    val distance: Double? = null
 )
 
 data class YelpSearchResponse(
