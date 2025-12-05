@@ -8,9 +8,12 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
+/**
+ * Global shapes used by Material3 theme.
+ */
 val Shapes = Shapes()
 
-// ✅ Light mode palette
+// Light mode palette
 private val LightColors = lightColorScheme(
     primary = CheckCheqGreen,
     onPrimary = Color.White,
@@ -18,13 +21,13 @@ private val LightColors = lightColorScheme(
     onSecondary = Color.Black,
     secondaryContainer = CheckCheqGreenContainer.copy(alpha = 0.08f),
     onSecondaryContainer = CheckCheqGreen,
-    surface = Color(0xFFFDFDFD),      // light surface
-    background = Color(0xFFF5F5F5),   // light background
+    surface = Color(0xFFFDFDFD),
+    background = Color(0xFFF5F5F5),
     onSurface = Color(0xFF121212),
     onBackground = Color(0xFF121212)
 )
 
-// ✅ Dark mode palette
+// Dark mode palette
 private val DarkColors = darkColorScheme(
     primary = CheckCheqGreen,
     onPrimary = Color.Black,
@@ -39,9 +42,10 @@ private val DarkColors = darkColorScheme(
 )
 
 /**
- * App theme wrapper.
+ * App theme wrapper for CheckCheq.
  *
  * @param darkTheme if true use [DarkColors], otherwise [LightColors].
+ * @param content composable tree to be themed.
  */
 @Composable
 fun CheckCheqTheme(

@@ -12,8 +12,18 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
- * UI wrapper around [YelpRepository] for a single PricePost.
+ * ViewModel wrapper around [YelpRepository] that exposes Yelp lookup state for a post.
+ *
+ * It drives UI for showing Yelp information alongside a [PricePost] by exposing:
+ * - [YelpUiState.isLoading] while the network request is in flight
+ * - [YelpUiState.business] when a matching business is found
+ * - [YelpUiState.error] if the lookup fails or returns no usable result
+ *
+ * Typical usage:
+ * - Call [loadForPost] once when the details screen is opened for a restaurant-like post.
+ * - Observe [uiState] from the composable to render loading / error / success states.
  */
+
 data class YelpUiState(
     val isLoading: Boolean = false,
     val business: YelpBusiness? = null,

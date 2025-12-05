@@ -13,7 +13,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Strongly-typed wrapper around DataStore for app settings.
+ * Strongly-typed snapshot of all persisted settings.
  */
 data class SettingsData(
     val nearMeRadiusMeters: Int = 1000,
@@ -22,6 +22,9 @@ data class SettingsData(
     val themeMode: ThemeMode = ThemeMode.SYSTEM
 )
 
+/**
+ * Repository that wraps [DataStore] access for user settings.
+ */
 @Singleton
 class SettingsRepository @Inject constructor(
     private val dataStore: DataStore<Preferences>
@@ -57,18 +60,38 @@ class SettingsRepository @Inject constructor(
         )
     }
 
+    /**
+     * Persist a new near-me radius.
+     *
+     * @param meters radius in meters.
+     */
     suspend fun setNearMeRadius(meters: Int) {
         dataStore.edit { it[Keys.NEAR_ME_RADIUS] = meters }
     }
 
+    /**
+     * Persist whether the feed should start with near-me filtering enabled.
+     *
+     * @param enabled true to enable, false to disable.
+     */
     suspend fun setStartWithNearMe(enabled: Boolean) {
         dataStore.edit { it[Keys.START_WITH_NEAR_ME] = enabled }
     }
 
+    /**
+     * Persist the default category filter used by the feed.
+     *
+     * @param category category name (e.g. "Grocery", "All").
+     */
     suspend fun setDefaultCategory(category: String) {
         dataStore.edit { it[Keys.DEFAULT_CATEGORY] = category }
     }
 
+    /**
+     * Persist the current theme selection.
+     *
+     * @param mode one of [ThemeMode.SYSTEM], [ThemeMode.LIGHT], or [ThemeMode.DARK].
+     */
     suspend fun setThemeMode(mode: ThemeMode) {
         val encoded = when (mode) {
             ThemeMode.SYSTEM -> "system"

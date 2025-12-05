@@ -37,6 +37,17 @@ import com.jdeguzman.checkcheqapp.ui.SettingsViewModel
 import com.jdeguzman.checkcheqapp.ui.theme.CheckCheqTheme
 import dagger.hilt.android.AndroidEntryPoint
 
+/**
+ * Main entry point for the CheckCheq app.
+ *
+ * Responsibilities:
+ * - Initializes the Google Places SDK with the API key from resources
+ * - Reads the current theme preference from [SettingsViewModel] and applies [CheckCheqTheme]
+ * - Sets the root composable [CheckCheqAppRoot], which decides whether to show:
+ *   - The authentication flow (when the user is signed out), or
+ *   - The main bottom-navigation shell (Feed / Map / Settings) when signed in.
+ */
+
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 

@@ -13,8 +13,19 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
- * UI-facing state for Settings screen + global app settings.
+ * ViewModel that exposes global app settings to the UI and persists changes.
+ *
+ * Responsibilities:
+ * - Collects settings from [SettingsRepository.settingsFlow] (DataStore-backed)
+ * - Reads the current Firebase user to populate account info for the Settings screen
+ * - Provides intents for updating:
+ *   - Near-me search radius
+ *   - Whether the feed starts in "near me" mode
+ *   - Default category filter
+ *   - Theme mode (System / Light / Dark)
+ * - Handles sign-out and clears user-related fields in [SettingsUiState].
  */
+
 data class SettingsUiState(
     val isSignedIn: Boolean = false,
     val displayName: String? = null,

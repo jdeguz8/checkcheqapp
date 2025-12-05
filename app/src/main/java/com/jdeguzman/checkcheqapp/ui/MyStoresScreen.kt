@@ -48,14 +48,14 @@ import kotlinx.coroutines.launch
  * Map screen showing nearby price posts and allowing new posts to be added.
  *
  * Features:
- * - Google Maps Compose map with my-location and zoom controls
- * - Long-press to start adding a post at a coordinate
- * - Google Places autocomplete search with camera animation
- * - Near-me toggle to filter visible pins within a radius
- * - Shows an Add Price dialog driven by [MyStoresViewModel]
+ * - Google Maps Compose map with my-location and zoom controls.
+ * - Long-press to start adding a post at a coordinate.
+ * - Google Places autocomplete search with camera animation.
+ * - Near-me toggle to filter visible pins within a radius.
+ * - Add Price dialog driven by [MyStoresViewModel].
  */
 @OptIn(ExperimentalMaterial3Api::class)
-@SuppressLint("MissingPermission") // we guard all location calls with permission checks
+@SuppressLint("MissingPermission") // all location calls are guarded by permission checks
 @Composable
 fun MyStoresScreen(
     onBack: () -> Unit,
@@ -80,11 +80,10 @@ fun MyStoresScreen(
         )
     }
 
-    val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        hasLocationPermission = granted
-    }
+    val permissionLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            hasLocationPermission = granted
+        }
 
     LaunchedEffect(Unit) {
         if (!hasLocationPermission) {
@@ -133,6 +132,9 @@ fun MyStoresScreen(
 
     var sessionToken by remember { mutableStateOf(AutocompleteSessionToken.newInstance()) }
 
+    /**
+     * Run a Places autocomplete search for [query] and update local state.
+     */
     fun runPlaceSearch(query: String) {
         val client = placesClient ?: return
         if (query.isBlank()) {
@@ -209,7 +211,7 @@ fun MyStoresScreen(
                             )
                         }
 
-                        // 👉 Open Add Price dialog with store name prefilled
+                        // Open Add Price dialog with store name prefilled
                         viewModel.onPlaceSelected(
                             lat = latLng.latitude,
                             lng = latLng.longitude,
@@ -298,7 +300,7 @@ fun MyStoresScreen(
                 }
             }
 
-            // --- Search UI overlay (opaque, elevated) ---
+            // --- Search UI overlay ---
             Column(
                 modifier = Modifier
                     .align(Alignment.TopCenter)

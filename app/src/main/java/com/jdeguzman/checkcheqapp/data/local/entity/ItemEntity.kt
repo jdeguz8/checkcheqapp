@@ -6,18 +6,14 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 
 /**
- * Room entity for a saved item in the master item list.
+ * Room entity representing an item in the master item list.
  *
- * Uses a unique index on name so we can safely upsert by name.
+ * Uses a unique index on [name] so that upserts by name remain safe.
  */
 @Entity(
     tableName = "items",
     indices = [Index(value = ["name"], unique = true)]
 )
-
-/**
- main entity item for ItemEntity
- */
 data class ItemEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,

@@ -2,8 +2,9 @@ package com.jdeguzman.checkcheqapp.data.local.entity
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+
 /**
- * Room entity representing a single row in the BasketItem table.
+ * Room entity representing a single row in the `BasketItem` table.
  *
  * Used for quick, local basket lists separate from the map price posts.
  */

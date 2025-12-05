@@ -1,4 +1,3 @@
-// data/repository/YelpRepository.kt
 package com.jdeguzman.checkcheqapp.data.repository
 
 import android.util.Log
@@ -8,11 +7,25 @@ import com.jdeguzman.checkcheqapp.domain.PricePost
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * Repository that encapsulates Yelp search logic for a given [PricePost].
+ */
 @Singleton
 class YelpRepository @Inject constructor(
     private val api: YelpApiService
 ) {
 
+    /**
+     * Try to find the best matching [YelpBusiness] for a given [post].
+     *
+     * Heuristics:
+     * - Search with store name as the term.
+     * - Optionally map category to Yelp categories.
+     * - Prefer businesses whose name contains the store name.
+     * - Fallback to the closest business by distance.
+     *
+     * @return the best matching business or `null` if none match or an error occurs.
+     */
     suspend fun findBestMatchForPost(post: PricePost): YelpBusiness? {
         return try {
             val term = post.storeName // keep it simple; item name can confuse things
@@ -35,7 +48,7 @@ class YelpRepository @Inject constructor(
                 longitude = post.lng,
                 radius = 2000,
                 categories = categories,
-                limit = 10        // give us a few more to choose from
+                limit = 10
             )
 
             if (response.businesses.isEmpty()) {

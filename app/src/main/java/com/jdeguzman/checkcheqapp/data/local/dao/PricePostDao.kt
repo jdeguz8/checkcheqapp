@@ -9,10 +9,10 @@ import com.jdeguzman.checkcheqapp.data.local.entity.PricePostEntity
 import kotlinx.coroutines.flow.Flow
 
 /**
- * DAO for accessing locally cached price posts.
+ * Room DAO for accessing locally cached price posts.
  *
- * Backed by the `price_posts` Room table.
- * Used by the app to store and observe all price pins shown on the map/feed.
+ * Backed by the `price_posts` table and used as an offline cache
+ * for pins shown on the map/feed.
  */
 @Dao
 interface PricePostDao {

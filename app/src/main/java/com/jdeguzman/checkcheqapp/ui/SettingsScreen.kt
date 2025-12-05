@@ -27,6 +27,23 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.jdeguzman.checkcheqapp.R
 import com.jdeguzman.checkcheqapp.domain.ThemeMode
 
+/**
+ * Settings screen for CheckCheq.
+ *
+ * Lets the user:
+ * - View basic account info and sign out
+ * - Choose appearance (System / Light / Dark)
+ * - Configure "near me" radius and whether the feed starts with near-me enabled
+ * - Pick a default category filter for the feed
+ *
+ * This composable reads from [SettingsViewModel.uiState] and delegates all mutations
+ * back to the ViewModel, so the actual values are persisted via DataStore.
+ *
+ * @param settingsViewModel ViewModel exposing and persisting app settings (radius, category, theme).
+ * @param authViewModel Shared [AuthViewModel] used to sign the current user out when requested.
+ */
+
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(

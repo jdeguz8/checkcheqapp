@@ -14,7 +14,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Divider
 import androidx.compose.material3.DividerDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -54,23 +53,18 @@ fun FeedScreen(
     authViewModel: AuthViewModel = hiltViewModel(),
     onOpenMap: () -> Unit = {},
     onOpenPostDetails: (Long) -> Unit = {}
-)
+) {
+    val posts by viewModel.pins.collectAsState()
+    val settingsState by settingsViewModel.uiState.collectAsState()
+    val authState by authViewModel.uiState.collectAsState()
 
- {
-     val posts by viewModel.pins.collectAsState()
-     val settingsState by settingsViewModel.uiState.collectAsState()
+    val signedInLabel = when {
+        authState.displayName != null -> "Signed in as ${authState.displayName}"
+        authState.email != null -> "Signed in as ${authState.email}"
+        else -> "Browsing as guest"
+    }
 
-     val authState by authViewModel.uiState.collectAsState()
-
-     val signedInLabel = when {
-         authState.displayName != null -> "Signed in as ${authState.displayName}"
-         authState.email != null -> "Signed in as ${authState.email}"
-         else -> "Browsing as guest"
-     }
-
-
-
-     var selectedPost by remember { mutableStateOf<PricePost?>(null) }
+    var selectedPost by remember { mutableStateOf<PricePost?>(null) }
 
     // --- user location state ---
     val context = LocalContext.current
@@ -105,11 +99,9 @@ fun FeedScreen(
     }
 
     // --- filters ---
-     var nearMeOnly by remember(settingsState.startWithNearMe) {
-         mutableStateOf(settingsState.startWithNearMe)
-     }
-
-
+    var nearMeOnly by remember(settingsState.startWithNearMe) {
+        mutableStateOf(settingsState.startWithNearMe)
+    }
 
     // Static list of categories for now
     val categoryOptions = listOf(
@@ -121,72 +113,69 @@ fun FeedScreen(
         "Fast food",
         "Other"
     )
-     var selectedCategory by remember(settingsState.defaultCategory) {
-         mutableStateOf(settingsState.defaultCategory)
-     }
-     val filteredPosts = remember(
-         posts,
-         userLocation,
-         nearMeOnly,
-         selectedCategory,
-         settingsState.nearMeRadiusMeters
-     ) {
-         var base = posts.sortedByDescending { it.createdAt }
+    var selectedCategory by remember(settingsState.defaultCategory) {
+        mutableStateOf(settingsState.defaultCategory)
+    }
 
-         if (selectedCategory != "All") {
-             base = base.filter { post ->
-                 post.category?.equals(selectedCategory, ignoreCase = true) == true
-             }
-         }
+    val filteredPosts = remember(
+        posts,
+        userLocation,
+        nearMeOnly,
+        selectedCategory,
+        settingsState.nearMeRadiusMeters
+    ) {
+        var base = posts.sortedByDescending { it.createdAt }
 
-         if (nearMeOnly && userLocation != null) {
-             val radiusMeters = settingsState.nearMeRadiusMeters.toFloat()
-             base = base.filter { post ->
-                 val dist = computeDistanceMetersForFeed(userLocation, post)
-                 dist != null && dist <= radiusMeters
-             }
-         }
+        if (selectedCategory != "All") {
+            base = base.filter { post ->
+                post.category?.equals(selectedCategory, ignoreCase = true) == true
+            }
+        }
 
-         base
-     }
+        if (nearMeOnly && userLocation != null) {
+            val radiusMeters = settingsState.nearMeRadiusMeters.toFloat()
+            base = base.filter { post ->
+                val dist = computeDistanceMetersForFeed(userLocation, post)
+                dist != null && dist <= radiusMeters
+            }
+        }
 
+        base
+    }
 
-     Column(
+    Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp)
     ) {
         // Header row
-         Column(
-             modifier = Modifier.fillMaxWidth()
-         ) {
-             Row(
-                 modifier = Modifier.fillMaxWidth(),
-                 horizontalArrangement = Arrangement.SpaceBetween,
-                 verticalAlignment = Alignment.CenterVertically
-             ) {
-                 Text(
-                     text = "Latest posts",
-                     style = MaterialTheme.typography.titleLarge,
-                     fontWeight = FontWeight.SemiBold
-                 )
+        Column(
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Latest posts",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold
+                )
 
-                 TextButton(onClick = onOpenMap) {
-                     Text("Open map")
-                 }
-             }
+                TextButton(onClick = onOpenMap) {
+                    Text("Open map")
+                }
+            }
 
-             Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(4.dp))
 
-             Text(
-                 text = signedInLabel,
-                 style = MaterialTheme.typography.bodySmall,
-                 color = MaterialTheme.colorScheme.onSurfaceVariant
-             )
-         }
-
-         Spacer(Modifier.height(8.dp))
-
+            Text(
+                text = signedInLabel,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
 
         Spacer(Modifier.height(8.dp))
 
@@ -200,36 +189,34 @@ fun FeedScreen(
         Spacer(Modifier.height(8.dp))
 
         // Near-me toggle (only meaningful if we have location)
-         // Near-me toggle (only meaningful if we have location)
-         if (userLocation != null) {
-             val radiusLabel = if (settingsState.nearMeRadiusMeters < 1000) {
-                 "${settingsState.nearMeRadiusMeters} m"
-                 "${settingsState.nearMeRadiusMeters} m"
-             } else {
-                 "${settingsState.nearMeRadiusMeters / 1000} km"
-             }
+        if (userLocation != null) {
+            val radiusLabel = if (settingsState.nearMeRadiusMeters < 1000) {
+                "${settingsState.nearMeRadiusMeters} m"
+            } else {
+                "${settingsState.nearMeRadiusMeters / 1000} km"
+            }
 
-             Row(
-                 modifier = Modifier
-                     .fillMaxWidth()
-                     .padding(bottom = 8.dp),
-                 verticalAlignment = Alignment.CenterVertically,
-                 horizontalArrangement = Arrangement.SpaceBetween
-             ) {
-                 Text(
-                     text = "Only show posts near me (≤ $radiusLabel)",
-                     style = MaterialTheme.typography.bodyMedium
-                 )
-                 Switch(
-                     checked = nearMeOnly,
-                     onCheckedChange = { nearMeOnly = it }
-                 )
-             }
-         }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "Only show posts near me (≤ $radiusLabel)",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Switch(
+                    checked = nearMeOnly,
+                    onCheckedChange = { nearMeOnly = it }
+                )
+            }
+        }
 
-         Spacer(Modifier.height(4.dp))
+        Spacer(Modifier.height(4.dp))
 
-         HorizontalDivider(Modifier, DividerDefaults.Thickness, DividerDefaults.color)
+        HorizontalDivider(Modifier, DividerDefaults.Thickness, DividerDefaults.color)
 
         if (filteredPosts.isEmpty()) {
             Text(
@@ -311,17 +298,17 @@ private fun CategoryFilterRow(
     }
 }
 
-
-/*** Card UI for a single price post in the feed.
-*
-* Shows:
-* - optional thumbnail image
-* - store and item names
-* - category label (if present)
-* - price pill
-* - "Posted by" info
-* - creation time and distance from the user
-*/
+/**
+ * Card UI for a single price post in the feed.
+ *
+ * Shows:
+ * - optional thumbnail image
+ * - store and item names
+ * - category label (if present)
+ * - price pill
+ * - "Posted by" info
+ * - creation time and distance from the user
+ */
 @Composable
 private fun PricePostCard(
     post: PricePost,
@@ -443,7 +430,9 @@ private fun PricePostCard(
 }
 
 /**
- * Compute distance in meters between user and post for the feed screen.
+ * Compute distance in meters between the user and a post for the feed screen.
+ *
+ * @return distance in meters, or `null` if user location is missing.
  */
 private fun computeDistanceMetersForFeed(
     userLocation: Location?,
@@ -462,8 +451,10 @@ private fun computeDistanceMetersForFeed(
 }
 
 /**
- * Convert distance in meters into a human-readable string
- * like "83 m away" or "1.3 km away".
+ * Convert distance in meters into a human-readable string like
+ * `"83 m away"` or `"1.3 km away"`.
+ *
+ * @return formatted distance string, or `null` if user location is missing.
  */
 private fun computeDistanceTextForFeed(
     userLocation: Location?,

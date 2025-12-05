@@ -59,19 +59,24 @@ import java.util.Date
  * Detail screen for a single [PricePost].
  *
  * Shows:
- * - Hero image (if present)
- * - Store / item name
- * - Price + category chips
- * - Posted by, date, and distance (if location permission granted)
- * - Location section with "Open in Maps"
+ * - Hero image for the post (if available)
+ * - Store and item names
+ * - Price and category chips
+ * - "Posted by", timestamp, and distance from the user (if location is available)
+ * - Location section with a button to open the coordinates in a maps app
  *
- * If the current user is the owner of the post:
- * - "Edit post" dialog (update store, item, price, category)
- * - "Delete post" button
+ * Additional behaviour:
+ * - If the current Firebase user owns the post, owner actions are shown:
+ *   - Edit dialog to update store, item, price, and category
+ *   - Delete button that removes the post from Firestore
+ * - For restaurant-like posts, it triggers a Yelp lookup and displays rating / price info.
  *
- * If the post looks like a restaurant/cafe/food place:
- * - Yelp info card with rating, review count, and price tier.
+ * @param postId ID of the post to display, typically the `createdAt` timestamp used as an ID.
+ * @param onBack Callback invoked when the user presses the back button or after deleting the post.
+ * @param viewModel Shared [MyStoresViewModel] providing the list of posts and update/delete actions.
+ * @param yelpViewModel [YelpViewModel] used to fetch and expose Yelp details for this post.
  */
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PricePostDetailsScreen(

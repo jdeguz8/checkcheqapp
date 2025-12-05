@@ -46,6 +46,9 @@ object AppModule {
 
     // ---------- Room / Database ----------
 
+    /**
+     * Provide the singleton Room [AppDatabase] instance.
+     */
     @Provides
     @Singleton
     fun provideDb(@ApplicationContext ctx: Context): AppDatabase =
@@ -53,15 +56,27 @@ object AppModule {
             .fallbackToDestructiveMigration()
             .build()
 
+    /**
+     * Provide [ItemDao] from [AppDatabase].
+     */
     @Provides
     fun provideItemDao(db: AppDatabase): ItemDao = db.itemDao()
 
+    /**
+     * Provide [BasketDao] from [AppDatabase].
+     */
     @Provides
     fun provideBasketDao(db: AppDatabase): BasketDao = db.basketDao()
 
+    /**
+     * Provide [PricePostDao] from [AppDatabase].
+     */
     @Provides
     fun providePricePostDao(db: AppDatabase): PricePostDao = db.pricePostDao()
 
+    /**
+     * Provide the [PricePostRepository] backed by Room.
+     */
     @Provides
     @Singleton
     fun providePricePostRepository(dao: PricePostDao): PricePostRepository =
@@ -69,6 +84,9 @@ object AppModule {
 
     // ---------- DataStore (Settings) ----------
 
+    /**
+     * Provide the singleton [DataStore] of [Preferences] for settings.
+     */
     @Provides
     @Singleton
     fun providePreferencesDataStore(
@@ -81,25 +99,37 @@ object AppModule {
 
     // ---------- Firebase ----------
 
+    /**
+     * Provide the singleton Firestore instance.
+     */
     @Provides
     @Singleton
     fun provideFirestore(): FirebaseFirestore = FirebaseFirestore.getInstance()
 
+    /**
+     * Provide the singleton Firebase Storage instance.
+     */
     @Provides
     @Singleton
     fun provideFirebaseStorage(): FirebaseStorage = FirebaseStorage.getInstance()
 
     // ---------- Moshi (shared for Yelp) ----------
 
+    /**
+     * Provide a configured [Moshi] instance with Kotlin support.
+     */
     @Provides
     @Singleton
     fun provideMoshi(): Moshi =
         Moshi.Builder()
-            .add(KotlinJsonAdapterFactory())   // <-- Kotlin-aware adapter
+            .add(KotlinJsonAdapterFactory())
             .build()
 
     // ---------- Yelp: OkHttp + Retrofit + API + Repository ----------
 
+    /**
+     * Provide an [OkHttpClient] with Yelp authorization + logging.
+     */
     @Provides
     @Singleton
     fun provideYelpOkHttpClient(): OkHttpClient {
@@ -122,6 +152,9 @@ object AppModule {
             .build()
     }
 
+    /**
+     * Provide the Yelp [Retrofit] instance using Moshi.
+     */
     @Provides
     @Singleton
     fun provideYelpRetrofit(
@@ -131,14 +164,20 @@ object AppModule {
         Retrofit.Builder()
             .baseUrl("https://api.yelp.com/v3/")
             .client(client)
-            .addConverterFactory(MoshiConverterFactory.create(moshi)) // <-- use our Moshi
+            .addConverterFactory(MoshiConverterFactory.create(moshi))
             .build()
 
+    /**
+     * Provide the [YelpApiService] created from [Retrofit].
+     */
     @Provides
     @Singleton
     fun provideYelpApiService(retrofit: Retrofit): YelpApiService =
         retrofit.create(YelpApiService::class.java)
 
+    /**
+     * Provide the [YelpRepository] that wraps Yelp API calls.
+     */
     @Provides
     @Singleton
     fun provideYelpRepository(api: YelpApiService): YelpRepository =

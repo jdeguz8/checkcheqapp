@@ -4,6 +4,7 @@ import android.app.Activity
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -27,6 +28,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -36,28 +38,20 @@ import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
 import com.jdeguzman.checkcheqapp.R
-import androidx.compose.foundation.Image
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.unit.dp
-
 
 /**
  * High-level authentication screen for CheckCheq.
  *
- * This composable provides two flows:
- * - **Login mode** (default): email/password sign-in + Google Sign-In
- * - **Register mode**: create an account with email, password, and optional username
+ * Provides two flows:
+ * - Login mode (default): email/password + Google Sign-In.
+ * - Register mode: email/password + optional username.
  *
- * Features:
- * - Password field uses obscured input (●●●●●●) with a show/hide toggle.
- * - Simple mode toggle:
- *   - "Not a user? Create an account"
- *   - "Already have an account? Sign in"
- * - Displays loading spinner and error snackbar based on [authViewModel] state.
+ * Also includes:
+ * - Password visibility toggle.
+ * - Mode toggle between sign-in and sign-up.
+ * - Loading indicator and error snackbar via [AuthViewModel].
  *
- * @param authViewModel The view model responsible for handling authentication
- * logic (email/password registration, login, and Google sign-in) and exposing
- * UI state such as loading and error messages.
+ * @param authViewModel ViewModel that handles Firebase auth operations.
  */
 @Composable
 fun AuthScreen(

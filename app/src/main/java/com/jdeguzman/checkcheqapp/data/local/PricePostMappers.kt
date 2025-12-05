@@ -4,10 +4,10 @@ import com.jdeguzman.checkcheqapp.data.local.entity.PricePostEntity
 import com.jdeguzman.checkcheqapp.domain.PricePost
 
 /**
- * Map a Room [PricePostEntity] to the domain-level [PricePost] model.
+ * Map a [PricePostEntity] from Room to the domain-level [PricePost] model.
  *
  * Use this when reading from the database and exposing price posts to the UI
- * or other layers that should not depend on Room entities directly.
+ * or other layers that should not depend directly on Room entities.
  */
 fun PricePostEntity.toDomain(): PricePost =
     PricePost(
@@ -25,10 +25,10 @@ fun PricePostEntity.toDomain(): PricePost =
     )
 
 /**
- * Map a domain-level [PricePost] to the Room [PricePostEntity].
+ * Map a domain-level [PricePost] model to the Room [PricePostEntity].
  *
- * Use this when persisting posts back into the database from your
- * repositories or view models.
+ * Use this when persisting posts back into the database from repositories
+ * or view models.
  */
 fun PricePost.toEntity(): PricePostEntity =
     PricePostEntity(
