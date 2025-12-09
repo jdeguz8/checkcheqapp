@@ -43,7 +43,8 @@ import com.jdeguzman.checkcheqapp.ui.SettingsViewModel
 import com.jdeguzman.checkcheqapp.ui.viewmodels.MyStoresViewModel
 import java.text.DateFormat
 import java.util.Date
-
+import androidx.compose.ui.platform.LocalContext
+import com.jdeguzman.checkcheqapp.ui.NearbyNotificationManager
 /**
  * Main feed screen showing a list of price posts.
  *
@@ -147,33 +148,28 @@ fun FeedScreen(
 
         base
     }
-    var lastNotifiedCreatedAt by remember { mutableStateOf<Long?>(null) }
 
-    LaunchedEffect(filteredPosts, userLocation, settingsState.notifyOnNearbyPosts) {
-        // If notifications are disabled, skip all work
-        if (!settingsState.notifyOnNearbyPosts) return@LaunchedEffect
-        if (userLocation == null || filteredPosts.isEmpty()) return@LaunchedEffect
+    // Remember which posts we've already seen to avoid spamming
+    var seenPostIds by remember { mutableStateOf<Set<Long>>(emptySet()) }
 
-        val notifyRadiusMeters = 1000f
+    LaunchedEffect(filteredPosts, userLocation) {
+        if (userLocation == null) return@LaunchedEffect
 
-        val latestNearby = filteredPosts
-            .filter { post ->
-                val dist = computeDistanceMetersForFeed(userLocation, post)
-                dist != null && dist <= notifyRadiusMeters
-            }
-            .maxByOrNull { it.createdAt }
+        // New posts that we haven't seen before
+        val currentIds = filteredPosts.map { it.id }.toSet()
+        val newPosts = filteredPosts.filter { it.id !in seenPostIds }
 
-        val lastSeen = lastNotifiedCreatedAt
-        if (latestNearby != null && (lastSeen == null || latestNearby.createdAt > lastSeen)) {
-            lastNotifiedCreatedAt = latestNearby.createdAt
+        newPosts.forEach { post ->
+            // Optionally, you can double-check distance here (<= 1km)
+            // val meters = computeDistanceMetersForFeed(userLocation, post)
+            // if (meters != null && meters <= 1000f) { ... }
 
-            Toast.makeText(
-                context,
-                "New post near you: ${latestNearby.storeName} - ${latestNearby.itemName}",
-                Toast.LENGTH_LONG
-            ).show()
+            NearbyNotificationManager.showNewNearbyPost(context, post)
         }
+
+        seenPostIds = currentIds
     }
+
 
 
 
