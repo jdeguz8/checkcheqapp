@@ -40,6 +40,14 @@ CheckCheq started as a simple “basket” + Room demo and has evolved into a **
 - Documented with **KDoc** and **Dokka** to generate API docs
 
 ---
+## 📱 Download
+
+You can install the latest APK here:
+
+👉 [Download CheckCheq v0.3.0 APK](https://github.com/jdeguz8/checkcheq-app/releases/tag/v0.3.0)
+
+
+
 
 ## Features
 
