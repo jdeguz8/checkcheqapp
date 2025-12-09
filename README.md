@@ -44,7 +44,7 @@ CheckCheq started as a simple “basket” + Room demo and has evolved into a **
 
 You can install the latest APK here:
 
-👉 [Download CheckCheq v0.3.0 APK](https://github.com/jdeguz8/checkcheq-app/releases/tag/v0.3.0)
+👉 [Download CheckCheq v0.3.0 APK](https://github.com/jdeguz8/checkcheqapp/releases/tag/v0.3.0)
 
 
 
