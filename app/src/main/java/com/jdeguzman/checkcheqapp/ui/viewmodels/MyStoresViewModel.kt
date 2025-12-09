@@ -18,6 +18,12 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 
+import com.google.firebase.firestore.DocumentChange
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
+
+
 /**
  * ViewModel for the map and shared price posts.
  *
@@ -36,6 +42,16 @@ class MyStoresViewModel @Inject constructor(
     // ---- retention policy ----
     private val retentionDays = 7L
     private val retentionMillis = retentionDays * 24L * 60L * 60L * 1000L
+
+    // Keep track of which posts we’ve already notified the UI about
+    private val notifiedPostIds = mutableSetOf<Long>()
+
+    // One-shot events for "a new post was added"
+    private val _newPostEvents = MutableSharedFlow<PricePost>(
+        extraBufferCapacity = 16
+    )
+    val newPostEvents: SharedFlow<PricePost> = _newPostEvents.asSharedFlow()
+
 
     // --- Firebase instances ---
     private val firestore = FirebaseFirestore.getInstance()
@@ -81,6 +97,7 @@ class MyStoresViewModel @Inject constructor(
                 val now = System.currentTimeMillis()
                 val cutoff = now - retentionMillis
 
+                // 1) Map the full snapshot into the list used by the UI
                 val posts = snapshot.documents.mapNotNull { doc ->
                     try {
                         val storeName = doc.getString("storeName") ?: return@mapNotNull null
@@ -119,8 +136,54 @@ class MyStoresViewModel @Inject constructor(
                 }
 
                 _pins.value = posts
+
+                // 2) Look only at newly ADDED docs for notification purposes
+                snapshot.documentChanges
+                    .filter { change -> change.type == DocumentChange.Type.ADDED }
+                    .forEach { change ->
+                        val doc = change.document
+                        try {
+                            val storeName = doc.getString("storeName") ?: return@forEach
+                            val itemName = doc.getString("itemName") ?: ""
+                            val price = doc.getDouble("price") ?: 0.0
+                            val lat = doc.getDouble("lat") ?: return@forEach
+                            val lng = doc.getDouble("lng") ?: return@forEach
+                            val photoUrl = doc.getString("photoUrl")
+                            val createdAt = doc.getLong("createdAt") ?: 0L
+                            val category = doc.getString("category")
+                            val postedBy = doc.getString("postedBy")
+                            val ownerUid = doc.getString("userId")
+
+                            // Respect retention window here too
+                            if (createdAt < cutoff) return@forEach
+
+                            val newPost = PricePost(
+                                id = createdAt,
+                                storeName = storeName,
+                                itemName = itemName,
+                                price = price,
+                                lat = lat,
+                                lng = lng,
+                                photoUri = photoUrl,
+                                createdAt = createdAt,
+                                category = category,
+                                postedBy = postedBy,
+                                ownerUid = ownerUid
+                            )
+
+                            // 🔔 Only emit once per post ID
+                            if (notifiedPostIds.add(newPost.id)) {
+                                viewModelScope.launch {
+                                    _newPostEvents.emit(newPost)
+                                }
+                            }
+                        } catch (ex: Exception) {
+                            Log.e("CheckCheq", "Failed to map added Firestore doc ${doc.id}", ex)
+                        }
+                    }
             }
     }
+
 
 
     /**

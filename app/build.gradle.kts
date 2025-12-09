@@ -84,6 +84,7 @@ dependencies {
     implementation(libs.androidx.credentials)
     implementation(libs.androidx.credentials.play.services.auth)
     implementation(libs.googleid)
+    implementation(libs.androidx.ui.text)
 
     // Compose
     val composeBom = platform("androidx.compose:compose-bom:2024.09.02")

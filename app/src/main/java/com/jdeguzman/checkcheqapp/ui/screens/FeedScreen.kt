@@ -3,7 +3,6 @@ package com.jdeguzman.checkcheqapp.ui.screens
 import android.Manifest
 import android.content.pm.PackageManager
 import android.location.Location
-import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -23,7 +22,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -39,18 +44,21 @@ import coil.compose.AsyncImage
 import com.google.android.gms.location.LocationServices
 import com.jdeguzman.checkcheqapp.domain.PricePost
 import com.jdeguzman.checkcheqapp.ui.AuthViewModel
+import com.jdeguzman.checkcheqapp.ui.NearbyNotificationManager
 import com.jdeguzman.checkcheqapp.ui.SettingsViewModel
 import com.jdeguzman.checkcheqapp.ui.viewmodels.MyStoresViewModel
 import java.text.DateFormat
 import java.util.Date
-import androidx.compose.ui.platform.LocalContext
-import com.jdeguzman.checkcheqapp.ui.NearbyNotificationManager
+
 /**
  * Main feed screen showing a list of price posts.
  *
  * Uses posts from [MyStoresViewModel], applies category and near-me filters
  * based on user preferences from [SettingsViewModel], and displays cards
  * with store, item, price, category, poster, and distance.
+ *
+ * Also listens to [MyStoresViewModel.newPostEvents] and triggers a system
+ * notification when a brand-new post appears within ~1 km of the user.
  */
 @Composable
 fun FeedScreen(
@@ -69,8 +77,6 @@ fun FeedScreen(
         authState.email != null -> "Signed in as ${authState.email}"
         else -> "Browsing as guest"
     }
-
-    var selectedPost by remember { mutableStateOf<PricePost?>(null) }
 
     // --- user location state ---
     val context = LocalContext.current
@@ -101,6 +107,20 @@ fun FeedScreen(
             }
         } else {
             permissionLauncher.launch(permission)
+        }
+    }
+
+    // 🔔 Listen for "new Firestore post" events and fire a system notification
+    // The ViewModel already ensures each post ID is emitted only once.
+    LaunchedEffect(Unit) {
+        viewModel.newPostEvents.collect { post ->
+            val loc = userLocation
+            val meters = computeDistanceMetersForFeed(loc, post)
+
+            // Use ~1km radius for notifications
+            if (meters != null && meters <= 1000f) {
+                NearbyNotificationManager.showNewNearbyPost(context, post)
+            }
         }
     }
 
@@ -149,30 +169,7 @@ fun FeedScreen(
         base
     }
 
-    // Remember which posts we've already seen to avoid spamming
-    var seenPostIds by remember { mutableStateOf<Set<Long>>(emptySet()) }
-
-    LaunchedEffect(filteredPosts, userLocation) {
-        if (userLocation == null) return@LaunchedEffect
-
-        // New posts that we haven't seen before
-        val currentIds = filteredPosts.map { it.id }.toSet()
-        val newPosts = filteredPosts.filter { it.id !in seenPostIds }
-
-        newPosts.forEach { post ->
-            // Optionally, you can double-check distance here (<= 1km)
-            // val meters = computeDistanceMetersForFeed(userLocation, post)
-            // if (meters != null && meters <= 1000f) { ... }
-
-            NearbyNotificationManager.showNewNearbyPost(context, post)
-        }
-
-        seenPostIds = currentIds
-    }
-
-
-
-
+    var selectedPost by remember { mutableStateOf<PricePost?>(null) }
 
     Column(
         modifier = Modifier
@@ -231,7 +228,7 @@ fun FeedScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 8.dp)
-                    .semantics(mergeDescendants = true) {},   // 👈 new
+                    .semantics(mergeDescendants = true) {},   // accessibility: treat row as one element
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
@@ -457,7 +454,6 @@ private fun PricePostCard(
                             }
                         }
                     }
-
                 }
             }
         }
