@@ -293,6 +293,15 @@ app/
  ├─ CheckCheqApp.kt      # @HiltAndroidApp application
  └─ MainActivity.kt      # NavHost, bottom navigation, theme, auth gating
 ```
+
+### Post freshness & expiry
+
+- Each post stores a `createdAt` timestamp (in milliseconds since epoch).
+- The app enforces a **7-day retention window**:
+  - On startup, a small cleanup runs against the local Room database to delete posts older than 7 days.
+  - The Firestore listener also ignores any document whose `createdAt` is older than the retention window.
+- Result: grocery deals automatically disappear from the feed and map after about a week, which better matches how real-world flyer deals expire.
+
 ## Getting Started
 
 ### 1. Clone the repo
