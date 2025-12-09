@@ -171,7 +171,7 @@ class MyStoresViewModel @Inject constructor(
                                 ownerUid = ownerUid
                             )
 
-                            // 🔔 Only emit once per post ID
+                            // Only emit once per post ID
                             if (notifiedPostIds.add(newPost.id)) {
                                 viewModelScope.launch {
                                     _newPostEvents.emit(newPost)
