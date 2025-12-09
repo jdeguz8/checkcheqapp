@@ -13,6 +13,8 @@ import kotlinx.coroutines.flow.Flow
  *
  * Backed by the `price_posts` table and used as an offline cache
  * for pins shown on the map/feed.
+ * Permanently delete posts older than the given cutoff timestamp.
+ * @param cutoffMillis all rows with createdAt < cutoffMillis will be removed.
  */
 @Dao
 interface PricePostDao {
@@ -70,4 +72,8 @@ interface PricePostDao {
      */
     @Query("DELETE FROM price_posts")
     suspend fun clear()
+
+    @Query("DELETE FROM price_posts WHERE createdAt < :cutoffMillis")
+    suspend fun deleteOlderThan(cutoffMillis: Long)
+
 }

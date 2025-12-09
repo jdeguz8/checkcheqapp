@@ -250,6 +250,29 @@ fun SettingsScreen(
                     )
                 }
 
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Notify me about new posts near me",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Text(
+                            text = "Show an in-app alert when a new price is posted within about 1 km.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Switch(
+                        checked = state.notifyOnNearbyPosts,
+                        onCheckedChange = { settingsViewModel.onNotifyOnNearbyPostsChanged(it) }
+                    )
+                }
+
+
                 Text(
                     text = "Default category filter",
                     style = MaterialTheme.typography.bodyMedium,

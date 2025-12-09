@@ -3,6 +3,7 @@ package com.jdeguzman.checkcheqapp.ui.screens
 import android.Manifest
 import android.content.pm.PackageManager
 import android.location.Location
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -146,6 +147,36 @@ fun FeedScreen(
 
         base
     }
+    var lastNotifiedCreatedAt by remember { mutableStateOf<Long?>(null) }
+
+    LaunchedEffect(filteredPosts, userLocation, settingsState.notifyOnNearbyPosts) {
+        // If notifications are disabled, skip all work
+        if (!settingsState.notifyOnNearbyPosts) return@LaunchedEffect
+        if (userLocation == null || filteredPosts.isEmpty()) return@LaunchedEffect
+
+        val notifyRadiusMeters = 1000f
+
+        val latestNearby = filteredPosts
+            .filter { post ->
+                val dist = computeDistanceMetersForFeed(userLocation, post)
+                dist != null && dist <= notifyRadiusMeters
+            }
+            .maxByOrNull { it.createdAt }
+
+        val lastSeen = lastNotifiedCreatedAt
+        if (latestNearby != null && (lastSeen == null || latestNearby.createdAt > lastSeen)) {
+            lastNotifiedCreatedAt = latestNearby.createdAt
+
+            Toast.makeText(
+                context,
+                "New post near you: ${latestNearby.storeName} - ${latestNearby.itemName}",
+                Toast.LENGTH_LONG
+            ).show()
+        }
+    }
+
+
+
 
     Column(
         modifier = Modifier

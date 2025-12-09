@@ -12,6 +12,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
+import androidx.datastore.preferences.core.floatPreferencesKey
+
 
 /**
  * Strongly-typed wrapper around DataStore for app settings.
@@ -21,7 +23,8 @@ data class SettingsData(
     val startWithNearMe: Boolean = false,
     val defaultCategory: String = "All",
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
-    val fontScale: Float = 1.0f // 1.0 = default, >1.0 = larger text
+    val fontScale: Float = 1.0f,
+    val notifyOnNearbyPosts: Boolean = true
 )
 
 @Singleton
@@ -35,6 +38,7 @@ class SettingsRepository @Inject constructor(
         val DEFAULT_CATEGORY = stringPreferencesKey("default_category")
         val THEME_MODE = stringPreferencesKey("theme_mode")
         val FONT_SCALE = floatPreferencesKey("font_scale")
+        val NOTIFY_NEARBY = booleanPreferencesKey("notify_nearby_posts")
     }
 
     /**
@@ -46,6 +50,7 @@ class SettingsRepository @Inject constructor(
         val category = prefs[Keys.DEFAULT_CATEGORY] ?: "All"
         val themeStr = prefs[Keys.THEME_MODE] ?: "system"
         val fontScale = prefs[Keys.FONT_SCALE] ?: 1.0f
+        val notifyNearby = prefs[Keys.NOTIFY_NEARBY] ?: true
 
         val themeMode = when (themeStr) {
             "light" -> ThemeMode.LIGHT
@@ -58,7 +63,8 @@ class SettingsRepository @Inject constructor(
             startWithNearMe = near,
             defaultCategory = category,
             themeMode = themeMode,
-            fontScale = fontScale
+            fontScale = fontScale,
+            notifyOnNearbyPosts = notifyNearby
         )
     }
 
@@ -90,5 +96,9 @@ class SettingsRepository @Inject constructor(
      */
     suspend fun setFontScale(scale: Float) {
         dataStore.edit { it[Keys.FONT_SCALE] = scale }
+    }
+
+    suspend fun setNotifyOnNearbyPosts(enabled: Boolean) {
+        dataStore.edit { it[Keys.NOTIFY_NEARBY] = enabled }
     }
 }

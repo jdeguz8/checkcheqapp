@@ -25,7 +25,8 @@ data class SettingsUiState(
     val defaultCategory: String = "All",
 
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
-    val fontScale: Float = 1.0f
+    val fontScale: Float = 1.0f,
+    val notifyOnNearbyPosts: Boolean = true
 )
 
 @HiltViewModel
@@ -50,6 +51,7 @@ class SettingsViewModel @Inject constructor(
                         defaultCategory = data.defaultCategory,
                         themeMode = data.themeMode,
                         fontScale = data.fontScale,
+                        notifyOnNearbyPosts = data.notifyOnNearbyPosts,
                         isSignedIn = user != null,
                         displayName = user?.displayName,
                         email = user?.email
@@ -100,6 +102,12 @@ class SettingsViewModel @Inject constructor(
                 displayName = null,
                 email = null
             )
+        }
+    }
+
+    fun onNotifyOnNearbyPostsChanged(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepo.setNotifyOnNearbyPosts(enabled)
         }
     }
 }

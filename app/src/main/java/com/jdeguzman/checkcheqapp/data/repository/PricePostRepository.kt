@@ -45,4 +45,9 @@ interface PricePostRepository {
      * Remove all locally stored posts.
      */
     suspend fun clear()
+
+    /**
+     * Delete all posts older than [cutoffMillis].
+     */
+    suspend fun deleteOlderThan(cutoffMillis: Long)
 }

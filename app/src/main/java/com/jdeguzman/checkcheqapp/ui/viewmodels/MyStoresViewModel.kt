@@ -32,6 +32,11 @@ class MyStoresViewModel @Inject constructor(
     private val repo: PricePostRepository
 ) : ViewModel() {
 
+
+    // ---- retention policy ----
+    private val retentionDays = 7L
+    private val retentionMillis = retentionDays * 24L * 60L * 60L * 1000L
+
     // --- Firebase instances ---
     private val firestore = FirebaseFirestore.getInstance()
     private val storage =
@@ -57,6 +62,7 @@ class MyStoresViewModel @Inject constructor(
 
     init {
         observeRemotePosts()
+        cleanupOldLocalPosts()
     }
 
     /**
@@ -72,6 +78,9 @@ class MyStoresViewModel @Inject constructor(
                 }
                 if (snapshot == null) return@addSnapshotListener
 
+                val now = System.currentTimeMillis()
+                val cutoff = now - retentionMillis
+
                 val posts = snapshot.documents.mapNotNull { doc ->
                     try {
                         val storeName = doc.getString("storeName") ?: return@mapNotNull null
@@ -83,9 +92,13 @@ class MyStoresViewModel @Inject constructor(
                         val createdAt = doc.getLong("createdAt") ?: 0L
                         val category = doc.getString("category")
                         val postedBy = doc.getString("postedBy")
-                        val ownerUid = doc.getString("userId")   // 🔹 map Firestore field -> ownerUid
+                        val ownerUid = doc.getString("userId")
 
-                        // Use createdAt as a stable id so details screen can find it
+                        // 🔹 Skip posts older than retention window
+                        if (createdAt < cutoff) {
+                            return@mapNotNull null
+                        }
+
                         PricePost(
                             id = createdAt,
                             storeName = storeName,
@@ -108,6 +121,7 @@ class MyStoresViewModel @Inject constructor(
                 _pins.value = posts
             }
     }
+
 
     /**
      * Called when the user long-presses on the map.
@@ -336,6 +350,23 @@ class MyStoresViewModel @Inject constructor(
         } catch (e: Exception) {
             Log.e("CheckCheq", "uploadPhotoToFirebase() failed", e)
             null
+        }
+    }
+
+    /**
+     * Best-effort cleanup of old posts from local Room storage.
+     *
+     * Runs once when the ViewModel is created. This keeps the local DB
+     * from growing forever even if Firestore still contains older docs.
+     */
+    private fun cleanupOldLocalPosts() {
+        viewModelScope.launch {
+            try {
+                val cutoff = System.currentTimeMillis() - retentionMillis
+                repo.deleteOlderThan(cutoff)
+            } catch (e: Exception) {
+                Log.e("CheckCheq", "Failed to cleanup old local posts", e)
+            }
         }
     }
 }

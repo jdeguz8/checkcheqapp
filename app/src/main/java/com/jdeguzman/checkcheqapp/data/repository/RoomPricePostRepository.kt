@@ -57,4 +57,11 @@ class RoomPricePostRepository @Inject constructor(
     override suspend fun clear() {
         dao.clear()
     }
+
+    /**
+     * Clear all posts from the table after 7 days
+     */
+    override suspend fun deleteOlderThan(cutoffMillis: Long) {
+        dao.deleteOlderThan(cutoffMillis)
+    }
 }
